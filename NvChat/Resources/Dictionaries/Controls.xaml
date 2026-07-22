@@ -236,11 +236,12 @@
                             BorderThickness="{TemplateBinding BorderThickness}"
                             CornerRadius="8">
                         <Grid>
+                            <!-- TextBox 는 Padding 을 내부 텍스트 렌더링에 이미 적용한다.
+                                 여기서 Margin 으로 또 주면 텍스트만 패딩이 2배가 되어 플레이스홀더와 어긋난다. -->
                             <ScrollViewer x:Name="PART_ContentHost"
-                                          Margin="{TemplateBinding Padding}"
                                           VerticalScrollBarVisibility="{TemplateBinding VerticalScrollBarVisibility}"
                                           HorizontalScrollBarVisibility="{TemplateBinding HorizontalScrollBarVisibility}" />
-                            <!-- 플레이스홀더는 콘텐츠 호스트와 동일한 Margin 으로 정확히 같은 위치에 둔다(추가 인셋 없음). -->
+                            <!-- 플레이스홀더는 Padding 만큼만 들여써서 실제 텍스트와 정확히 같은 위치에 둔다. -->
                             <TextBlock x:Name="Placeholder"
                                        Text="{TemplateBinding Tag}"
                                        Foreground="{StaticResource MutedForegroundBrush}"
@@ -284,7 +285,8 @@
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
                             CornerRadius="8">
-                        <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}" />
+                        <!-- PasswordBox 도 Padding 을 내부에서 적용하므로 여기서 Margin 을 또 주지 않는다. -->
+                        <ScrollViewer x:Name="PART_ContentHost" />
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsKeyboardFocused" Value="True">
