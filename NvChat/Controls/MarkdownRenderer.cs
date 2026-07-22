@@ -143,6 +143,15 @@ namespace NvChat.Controls
                     continue;
                 }
 
+                // 밑줄식(setext) 헤딩: 다음 줄이 === 로만 이루어져 있으면 제목이다.
+                // (--- 는 수평선과 겹치므로 === 만 처리한다)
+                if (index + 1 < lines.Length && IsSetextUnderline(lines[index + 1].TrimStart()))
+                {
+                    document.Blocks.Add(BuildHeading(1, trimmed));
+                    index += 2;
+                    continue;
+                }
+
                 // 문단
                 var paragraph = new List<string>();
                 while (index < lines.Length)
@@ -159,10 +168,16 @@ namespace NvChat.Controls
                         || (t.Contains('|') && index + 1 < lines.Length && IsTableSeparator(lines[index + 1].TrimStart())))
                         break;
 
+                    // 다음 줄이 === 밑줄이면 이 줄은 제목이므로 문단에 넣지 않고 바깥 루프로 넘긴다.
+                    if (index + 1 < lines.Length && IsSetextUnderline(lines[index + 1].TrimStart()))
+                        break;
+
                     paragraph.Add(line);
                     index++;
                 }
-                document.Blocks.Add(BuildParagraph(paragraph));
+
+                if (paragraph.Count > 0)
+                    document.Blocks.Add(BuildParagraph(paragraph));
             }
 
             // 마지막 블록의 하단 마진 제거(말풍선 하단 여백 방지)
@@ -635,6 +650,13 @@ namespace NvChat.Controls
         {
             var body = trimmed.Trim();
             return body.Length >= 3 && body.All(c => c == fenceChar);
+        }
+
+        /// <summary>"====" 처럼 = 로만 이루어진 줄인지. (밑줄식 제목의 밑줄)</summary>
+        private static bool IsSetextUnderline(string trimmed)
+        {
+            var body = trimmed.TrimEnd();
+            return body.Length >= 2 && body.All(c => c == '=');
         }
 
         private static bool IsHorizontalRule(string trimmed)

@@ -1282,6 +1282,11 @@ namespace NvChat.ViewModels
                 title = title.Substring(close + "</think>".Length).Trim();
 
             title = title.Replace("\r", " ").Replace("\n", " ").Trim();
+
+            // 모델이 마크다운으로 답할 때가 있어 서식 기호를 걷어낸다. (예: "## 제목", "**제목**")
+            title = title.TrimStart('#', ' ');
+            title = title.Trim('*', '_', '`', ' ');
+
             title = title.Trim('"', '\'', '「', '」', '“', '”', '.', ' ');
 
             if (title.Length > 40)

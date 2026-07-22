@@ -1,8 +1,9 @@
 using NvChat.Behaviors;
+using System;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Documents;
 using System.Windows.Media;
+using System.Windows.Threading;
 
 namespace NvChat.Controls
 {
@@ -26,8 +27,14 @@ namespace NvChat.Controls
 
         #region Fields
 
+        // 스트리밍 중에는 토큰마다 Markdown 이 바뀌므로, 매번 문서를 다시 만들면 비싸다.
+        // 한 번 다시 그리는 비용은 글이 길수록 커지므로 길이에 따라 간격을 늘린다.
+        private const int MinRebuildIntervalMs = 150;
+
         private bool _dirty = true;
         private RichTextBox _viewer;
+        private DispatcherTimer _throttle;
+        private long _lastRebuildTick;
 
         #endregion
 
@@ -59,19 +66,84 @@ namespace NvChat.Controls
             presenter._dirty = true;
 
             if (presenter.IsVisible)
-                presenter.Rebuild();
+                presenter.ScheduleRebuild();
         }
 
         private void OnIsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
         {
             if (IsVisible && _dirty)
+                ScheduleRebuild();
+        }
+
+        /// <summary>
+        /// 마지막 갱신에서 충분히 지났으면 곧바로, 아니면 타이머로 미뤄서 한 번만 다시 그린다.
+        /// </summary>
+        private void ScheduleRebuild()
+        {
+            var interval = CurrentInterval();
+
+            if (Environment.TickCount64 - _lastRebuildTick >= interval)
+            {
                 Rebuild();
+                return;
+            }
+
+            if (_throttle == null)
+            {
+                _throttle = new DispatcherTimer(DispatcherPriority.Background)
+                {
+                    Interval = TimeSpan.FromMilliseconds(interval)
+                };
+                _throttle.Tick += (_, __) =>
+                {
+                    if (_dirty == false)
+                    {
+                        _throttle.Stop();
+                        return;
+                    }
+
+                    Rebuild();
+
+                    if (_dirty == false)
+                        _throttle.Stop();
+                };
+            }
+
+            _throttle.Interval = TimeSpan.FromMilliseconds(interval);
+
+            if (_throttle.IsEnabled == false)
+                _throttle.Start();
+        }
+
+        /// <summary>
+        /// 현재 길이에 맞는 최소 갱신 간격. 짧은 글은 촘촘하게, 긴 글은 성기게 갱신해
+        /// 답변이 길어져도 CPU 사용이 계속 늘지 않게 한다.
+        /// </summary>
+        private int CurrentInterval()
+        {
+            var length = Markdown?.Length ?? 0;
+
+            if (length < 3000)
+                return MinRebuildIntervalMs;
+
+            if (length < 12000)
+                return MinRebuildIntervalMs * 2;
+
+            return MinRebuildIntervalMs * 4;
         }
 
         private void Rebuild()
         {
-            EnsureViewer().Document = MarkdownRenderer.RenderDocument(Markdown);
+            var viewer = EnsureViewer();
+
+            // 사용자가 드래그로 선택 중이면 다시 그리지 않는다(선택이 날아가므로).
+            // _dirty 를 유지해 두면 선택을 푼 뒤 다음 주기에 반영된다.
+            if (viewer.Selection != null && viewer.Selection.IsEmpty == false && viewer.IsKeyboardFocusWithin)
+                return;
+
+            viewer.Document = MarkdownRenderer.RenderDocument(Markdown);
             _dirty = false;
+            _lastRebuildTick = Environment.TickCount64;
         }
 
         /// <summary>

@@ -47,8 +47,11 @@ namespace NvChat.ViewModels
 
         public bool IsSystem => _role == ChatRole.System;
 
-        /// <summary>마크다운으로 렌더링할지 여부(어시스턴트의 완료·정상 메시지만).</summary>
-        public bool ShowMarkdown => IsAssistant && _isStreaming == false && _hasError == false && _isEditing == false;
+        /// <summary>
+        /// 마크다운으로 렌더링할지 여부. 스트리밍 중에도 렌더링해 클로드/챗GPT 처럼
+        /// 처음부터 서식이 보이게 한다. (잦은 재구성은 MarkdownPresenter 가 묶어서 처리)
+        /// </summary>
+        public bool ShowMarkdown => IsAssistant && _hasError == false && _isEditing == false;
 
         public bool HasReasoning => string.IsNullOrWhiteSpace(_reasoning) == false;
 
