@@ -8,6 +8,7 @@
     xmlns:vm="clr-namespace:NvChat.ViewModels"
     xmlns:controls="clr-namespace:NvChat.Controls"
     xmlns:behaviors="clr-namespace:NvChat.Behaviors"
+    xmlns:sys="clr-namespace:System;assembly=System.Runtime"
     mc:Ignorable="d"
     Title="NvChat"
     ShowTitleText="False"
@@ -19,6 +20,11 @@
     WindowStartupLocation="CenterScreen"
     d:DataContext="{d:DesignInstance vm:MainViewModel}"
     >
+
+    <views:WindowView.Resources>
+        <!-- 대화 컬럼의 최대 폭. 메시지 목록과 입력창이 같은 값을 써 세로로 정렬된다. -->
+        <sys:Double x:Key="ConversationColumnWidth">800</sys:Double>
+    </views:WindowView.Resources>
 
     <views:WindowView.InputBindings>
         <KeyBinding Modifiers="Control" Key="N" Command="{Binding NewConversationCommand}" />
@@ -385,13 +391,18 @@
             <Grid Grid.Row="3">
                 <ScrollViewer x:Name="MessagesScroller" VerticalScrollBarVisibility="Auto" Padding="20,6,14,6"
                               behaviors:AutoScrollBehavior.IsEnabled="True" ScrollChanged="MessagesScroller_ScrollChanged">
-                    <ItemsControl ItemsSource="{Binding SelectedConversation.Messages}">
+                    <!-- 대화 컬럼을 가운데로 모은다. 폭을 무한정 늘리면 한 줄이 너무 길어져 읽기 힘들고,
+                         상한만 두고 좌우 끝에 붙이면 넓은 창에서 가운데가 비어 어색해 보인다. -->
+                    <!-- Stretch + MaxWidth 조합이면 상한까지 늘어난 뒤 남는 공간에서 가운데로 놓인다.
+                         (HorizontalAlignment=Center 는 내용 크기로 줄어들어 버린다) -->
+                    <ItemsControl ItemsSource="{Binding SelectedConversation.Messages}"
+                                  MaxWidth="{StaticResource ConversationColumnWidth}" HorizontalAlignment="Stretch">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate DataType="{x:Type vm:ChatMessageViewModel}">
                                 <Grid x:Name="MsgRow" Margin="0,7">
                                     <!-- Background=Transparent 로 말풍선+여백+(숨겨진)액션 영역 전체를 히트테스트 대상으로 만들어
                                          마우스를 버튼으로 내려도 호버가 끊기지 않게 한다. -->
-                                    <StackPanel x:Name="Column" HorizontalAlignment="Left" MaxWidth="840" Background="Transparent">
+                                    <StackPanel x:Name="Column" HorizontalAlignment="Left" Background="Transparent">
                                         <!-- 말풍선: 내용만 감싼다 -->
                                         <Border x:Name="Bubble" Background="{StaticResource AssistantBubbleBackgroundBrush}" BorderBrush="{StaticResource AssistantBubbleBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="14,10" HorizontalAlignment="Left">
                                             <StackPanel>
@@ -562,7 +573,8 @@
             </Grid>
 
             <!-- ===== 입력 (Claude 식: 상단 텍스트 + 하단 툴바) ===== -->
-            <Border Grid.Row="4" Margin="20,6,20,16" Padding="10,8" Background="{StaticResource ControlBackgroundBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="14">
+            <Border Grid.Row="4" Margin="20,6,20,16" Padding="10,8" Background="{StaticResource ControlBackgroundBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="14"
+                    MaxWidth="{StaticResource ConversationColumnWidth}" HorizontalAlignment="Stretch">
                 <StackPanel>
                     <TextBox x:Name="InputBox" Text="{Binding InputText, UpdateSourceTrigger=PropertyChanged}"
                              Tag="메시지를 입력하세요…   (Enter 전송 · Shift+Enter 줄바꿈)" Background="Transparent" BorderThickness="0" Padding="2,2,2,4"
