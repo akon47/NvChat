@@ -18,6 +18,12 @@
 
 <img src="docs/screenshot.png" alt="NvChat 스크린샷" width="880">
 
+<br>
+
+<img src="docs/demo.gif" alt="실시간 마크다운 스트리밍" width="720">
+
+<sub>답변이 스트리밍되는 도중에도 마크다운이 실시간으로 렌더링됩니다.</sub>
+
 </div>
 
 ---
@@ -47,6 +53,8 @@
 
 [**Releases**](https://github.com/akon47/NvChat/releases/latest) 에서 `NvChat.exe` **파일 하나**만 내려받아 실행하면 됩니다.
 .NET 런타임이 없어도 실행되는 self-contained 단일 실행 파일입니다. (Windows x64)
+
+> **첫 실행:** 코드 서명이 없어 Windows SmartScreen 이 "Windows의 PC 보호" 창을 띄울 수 있습니다. **추가 정보 → 실행**을 누르세요.
 
 > 자동 업데이트가 포함된 버전부터는 새 버전이 앱 안에서 안내되므로 다시 수동으로 받을 필요가 없습니다.
 

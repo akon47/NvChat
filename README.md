@@ -18,6 +18,12 @@ Streaming chat · saved conversations · live markdown/code rendering · reasoni
 
 <img src="docs/screenshot.png" alt="NvChat screenshot" width="880">
 
+<br>
+
+<img src="docs/demo.gif" alt="Live markdown streaming" width="720">
+
+<sub>Markdown renders live as the answer streams in.</sub>
+
 </div>
 
 ---
@@ -47,6 +53,8 @@ Streaming chat · saved conversations · live markdown/code rendering · reasoni
 
 Grab the single `NvChat.exe` from [**Releases**](https://github.com/akon47/NvChat/releases/latest) and run it.
 It's a self-contained single file that runs even without the .NET runtime installed. (Windows x64)
+
+> **First run:** the app isn't code-signed, so Windows SmartScreen may show a blue "Windows protected your PC" prompt. Click **More info → Run anyway**.
 
 > Once you're on a build with auto-update, new versions are offered inside the app — no need to re-download manually.
 
