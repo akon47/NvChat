@@ -38,6 +38,10 @@ namespace NvChat.Views
 
         #region Overrides
 
+        // 메인/빠른채팅 창은 MainViewModel 을 공유하므로 VM 닫기 프로토콜을 쓰지 않는다.
+        // (쓰면 한쪽을 닫을 때 다른 쪽도 닫힌다.) 닫기 정책은 아래 OnClosing 이 담당.
+        protected override bool UsesViewModelCloseProtocol => false;
+
         protected override void OnClosing(CancelEventArgs e)
         {
             if (AllowClose)
@@ -228,6 +232,14 @@ namespace NvChat.Views
         private void ScrollToBottomButton_Click(object sender, RoutedEventArgs e)
         {
             MessagesScroller.ScrollToEnd();
+        }
+
+        /// <summary>이미 선택된 모델을 다시 클릭해도(선택 변경 이벤트가 없어도) 팝업이 닫히게 한다.</summary>
+        private void ModelList_MouseUp(object sender, MouseButtonEventArgs e)
+        {
+            var viewModel = ViewModel;
+            if (viewModel != null)
+                viewModel.IsModelPickerOpen = false;
         }
 
         #endregion

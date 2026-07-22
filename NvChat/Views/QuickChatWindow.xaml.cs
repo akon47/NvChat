@@ -73,6 +73,9 @@ namespace NvChat.Views
             Top = area.Top + area.Height * 0.14;
         }
 
+        // MainViewModel 을 메인 창과 공유하므로 VM 닫기 프로토콜에서 제외한다.
+        protected override bool UsesViewModelCloseProtocol => false;
+
         protected override void OnClosing(CancelEventArgs e)
         {
             if (_forceClose == false)

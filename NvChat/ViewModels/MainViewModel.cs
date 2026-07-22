@@ -56,6 +56,7 @@ namespace NvChat.ViewModels
         private ICollectionView _conversationsView;
         private ICollectionView _modelsView;
         private string _modelSearchText;
+        private DateTime _modelPickerClosedAt;
 
         private static readonly string[] _fallbackModelIds =
         {
@@ -184,8 +185,16 @@ namespace NvChat.ViewModels
             get => _isModelPickerOpen;
             set
             {
-                if (SetProperty(ref _isModelPickerOpen, value) && value == false && string.IsNullOrEmpty(_modelSearchText) == false)
-                    ModelSearchText = string.Empty;
+                if (SetProperty(ref _isModelPickerOpen, value) == false)
+                    return;
+
+                if (value == false)
+                {
+                    _modelPickerClosedAt = DateTime.UtcNow;
+
+                    if (string.IsNullOrEmpty(_modelSearchText) == false)
+                        ModelSearchText = string.Empty;
+                }
             }
         }
 
@@ -340,7 +349,7 @@ namespace NvChat.ViewModels
         public ICommand ToggleSidebarCommand => _toggleSidebarCommand ?? (_toggleSidebarCommand = new DelegateCommand(() => IsSidebarCollapsed = !IsSidebarCollapsed));
 
         private DelegateCommand _toggleModelPickerCommand;
-        public ICommand ToggleModelPickerCommand => _toggleModelPickerCommand ?? (_toggleModelPickerCommand = new DelegateCommand(() => IsModelPickerOpen = !IsModelPickerOpen));
+        public ICommand ToggleModelPickerCommand => _toggleModelPickerCommand ?? (_toggleModelPickerCommand = new DelegateCommand(OnToggleModelPicker));
 
         private DelegateCommand<PromptPreset> _insertPresetCommand;
         public ICommand InsertPresetCommand => _insertPresetCommand ?? (_insertPresetCommand = new DelegateCommand<PromptPreset>(OnInsertPreset, p => p != null));
@@ -396,7 +405,9 @@ namespace NvChat.ViewModels
             foreach (var data in _conversationStore.LoadAll())
                 Conversations.Add(ConversationViewModel.FromData(data));
 
-            if (string.IsNullOrEmpty(_conversationStore.LoadError) == false)
+            if (string.IsNullOrEmpty(_settingsStore.LoadError) == false)
+                StatusMessage = _settingsStore.LoadError;
+            else if (string.IsNullOrEmpty(_conversationStore.LoadError) == false)
                 StatusMessage = _conversationStore.LoadError;
 
             if (Conversations.Count == 0)
@@ -413,9 +424,15 @@ namespace NvChat.ViewModels
             }
         }
 
+        /// <summary>대화를 저장한다. (트레이 최소화 등에서도 호출되므로 스트림은 건드리지 않는다.)</summary>
         public void SaveState()
         {
-            // 진행 중인 스트림이 있으면 취소하여 HTTP/연속 작업이 매달리지 않게 한다.
+            SaveConversations();
+        }
+
+        /// <summary>진행 중인 스트리밍을 취소한다. 실제 앱 종료 경로에서만 호출.</summary>
+        public void CancelStreaming()
+        {
             try
             {
                 _streamCts?.Cancel();
@@ -423,8 +440,6 @@ namespace NvChat.ViewModels
             catch (ObjectDisposedException)
             {
             }
-
-            SaveConversations();
         }
 
         public AppSettings GetCurrentSettings()
@@ -546,6 +561,10 @@ namespace NvChat.ViewModels
             if (ConfirmCallback != null && ConfirmCallback("대화 삭제", $"'{conversation.Title}' 대화를 삭제할까요?") == false)
                 return;
 
+            // 스트리밍 중인 대화를 지우면 스트림도 함께 취소해야 IsStreaming 이 풀린다.
+            if (ReferenceEquals(conversation, _streamingConversation))
+                CancelStreaming();
+
             var wasSelected = ReferenceEquals(conversation, _selectedConversation);
             Conversations.Remove(conversation);
 
@@ -582,7 +601,10 @@ namespace NvChat.ViewModels
 
             var text = (conversation.RenameText ?? string.Empty).Trim();
             if (text.Length > 0)
+            {
                 conversation.Title = text;
+                conversation.TitleLocked = true; // 사용자가 지정한 제목은 자동 생성이 덮지 않는다.
+            }
 
             conversation.IsRenaming = false;
             SaveConversations();
@@ -964,6 +986,10 @@ namespace NvChat.ViewModels
             if (_settings.GenerateTitles == false)
                 return;
 
+            // 사용자가 직접 정했거나 이미 자동 생성이 끝난 제목은 다시 덮어쓰지 않는다(재생성 포함).
+            if (conversation.TitleLocked)
+                return;
+
             if (conversation.Messages.Count(m => m.IsAssistant) != 1)
                 return;
 
@@ -986,6 +1012,7 @@ namespace NvChat.ViewModels
                 if (string.IsNullOrWhiteSpace(title) == false)
                 {
                     conversation.Title = title;
+                    conversation.TitleLocked = true;
                     SaveConversations();
                 }
             }
@@ -1118,6 +1145,16 @@ namespace NvChat.ViewModels
 
             var q = _modelSearchText.Trim();
             return (model.Id ?? string.Empty).IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private void OnToggleModelPicker()
+        {
+            // Popup(StaysOpen=False)이 바깥 클릭으로 방금 닫힌 직후의 버튼 클릭은 무시한다.
+            // (아니면 닫혔다가 곧바로 다시 열려 버튼으로는 닫을 수 없다.)
+            if (_isModelPickerOpen == false && (DateTime.UtcNow - _modelPickerClosedAt).TotalMilliseconds < 300)
+                return;
+
+            IsModelPickerOpen = !_isModelPickerOpen;
         }
 
         private static string MakeTitle(string text)

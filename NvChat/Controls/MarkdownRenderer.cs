@@ -149,6 +149,13 @@ namespace NvChat.Controls
                 panel.Children.Add(BuildParagraph(paragraph));
             }
 
+            // 마지막 블록의 하단 마진을 없애 말풍선 하단에 여백이 남지 않게 한다.
+            if (panel.Children.Count > 0 && panel.Children[panel.Children.Count - 1] is FrameworkElement lastBlock)
+            {
+                var m = lastBlock.Margin;
+                lastBlock.Margin = new Thickness(m.Left, m.Top, m.Right, 0);
+            }
+
             return panel;
         }
 
@@ -840,9 +847,7 @@ namespace NvChat.Controls
             return new TextBlock
             {
                 TextWrapping = TextWrapping.Wrap,
-                Foreground = GetBrush("ForegroundBrush", Color.FromRgb(0xF2, 0xF2, 0xF3)),
-                LineHeight = 21,
-                LineStackingStrategy = LineStackingStrategy.BlockLineHeight
+                Foreground = GetBrush("ForegroundBrush", Color.FromRgb(0xF2, 0xF2, 0xF3))
             };
         }
 

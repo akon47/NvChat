@@ -14,7 +14,7 @@
     <AssemblyTitle>NvChat</AssemblyTitle>
     <Product>NvChat</Product>
     <Company>NvChat</Company>
-    <Version>1.2.0</Version>
+    <Version>1.2.1</Version>
     <NeutralLanguage>ko-KR</NeutralLanguage>
     <ApplicationIcon>Resources\app.ico</ApplicationIcon>
     <!-- WPF 는 app.manifest 의 PerMonitorV2 를 사용. WinForms(트레이용) 활성화로 뜨는 DPI 경고만 억제. -->
@@ -33,7 +33,7 @@
   <!-- 단일 self-contained exe 배포 설정(Release 전용).
        `dotnet publish -c Release` 한 번이면
        bin\Release\net8.0-windows\win-x64\publish\NvChat.exe 파일 하나만으로
-       실행 가능한 결과물이 나온다. (.NET 런타임 미설치 PC에서도 실행) -->
+       실행 가능한 결과물이 나온다. (.NET 런타임 미설치 PC 에서도 실행) -->
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <SelfContained>true</SelfContained>
     <PublishSingleFile>true</PublishSingleFile>
@@ -43,7 +43,7 @@
 
   <ItemGroup>
     <!-- API 키를 로컬에 저장할 때 Windows DPAPI(CurrentUser)로 암호화하기 위한 유일한 외부 의존성.
-         순수 관리형 어셈블리라 단일 exe에 문제없이 포함된다. -->
+         순수 관리형 어셈블리라 단일 exe 에 문제없이 포함된다. -->
     <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
   </ItemGroup>
 

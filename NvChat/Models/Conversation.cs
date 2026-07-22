@@ -18,6 +18,9 @@ namespace NvChat.Models
 
         public bool Pinned { get; set; }
 
+        /// <summary>제목이 확정되어 자동 생성 대상이 아님.</summary>
+        public bool TitleLocked { get; set; }
+
         public GenerationParameters Parameters { get; set; } = new GenerationParameters();
 
         public List<ChatMessage> Messages { get; set; } = new List<ChatMessage>();

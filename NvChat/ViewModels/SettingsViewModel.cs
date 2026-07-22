@@ -285,7 +285,9 @@ namespace NvChat.ViewModels
         {
             return new AppSettings
             {
-                ApiKey = (_apiKey ?? string.Empty).Trim(),
+                // null = 사용자가 키 칸을 한 번도 건드리지 않음(복호화 실패로 비어 보이는 경우 포함) → 저장소가 기존 키를 보존한다.
+                // "" = 사용자가 명시적으로 비움 → 실제로 지운다.
+                ApiKey = _apiKey == null ? null : _apiKey.Trim(),
                 BaseUrl = string.IsNullOrWhiteSpace(_baseUrl) ? new AppSettings().BaseUrl : _baseUrl.Trim(),
                 DefaultModelId = (_defaultModelId ?? string.Empty).Trim(),
                 DefaultSystemPrompt = _defaultSystemPrompt ?? string.Empty,

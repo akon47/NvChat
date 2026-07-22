@@ -167,12 +167,24 @@ namespace NvChat.Views
 
             // 뷰모델과 결합되어 있고 아직 닫기가 확정되지 않았다면,
             // 실제 닫기를 취소하고 뷰모델의 닫기 요청 프로토콜을 태운다.
-            if (_boundViewModel != null && _closeConfirmed == false && e.Cancel == false)
+            if (UsesViewModelCloseProtocol && _boundViewModel != null && _closeConfirmed == false && e.Cancel == false)
             {
                 e.Cancel = true;
                 Dispatcher.BeginInvoke(new Action(() => _boundViewModel.RequestClose()));
             }
         }
+
+        #endregion
+
+
+        #region Close protocol
+
+        /// <summary>
+        /// 뷰모델의 닫기 요청 프로토콜(RequestClose/CloseRequested)을 사용할지 여부.
+        /// 여러 창이 하나의 WindowViewModel 을 공유하는 경우(메인/빠른채팅) 서로를 닫아버리므로,
+        /// 자체 닫기 정책을 가진 창은 false 로 재정의한다.
+        /// </summary>
+        protected virtual bool UsesViewModelCloseProtocol => true;
 
         #endregion
 
@@ -186,7 +198,7 @@ namespace NvChat.Views
 
         private void OnCloseFromChrome()
         {
-            if (_boundViewModel != null)
+            if (UsesViewModelCloseProtocol && _boundViewModel != null)
                 _boundViewModel.RequestClose();
             else
                 Close();
@@ -199,7 +211,8 @@ namespace NvChat.Views
 
             _boundViewModel = e.NewValue as WindowViewModel;
 
-            if (_boundViewModel != null)
+            // 프로토콜을 쓰지 않는 창은 공유 뷰모델의 CloseRequested 에 반응하지 않는다.
+            if (_boundViewModel != null && UsesViewModelCloseProtocol)
                 _boundViewModel.CloseRequested += OnViewModelCloseRequested;
         }
 

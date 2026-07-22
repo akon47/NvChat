@@ -3,6 +3,7 @@ using NvChat.ViewModels;
 using NvChat.Views;
 using System;
 using System.IO;
+using System.Threading;
 using System.Windows;
 using System.Windows.Threading;
 
@@ -15,11 +16,17 @@ namespace NvChat
     {
         #region Fields
 
+        private const string MutexName = "NvChat_SingleInstance_2f9a7c";
+        private const string ShowSignalName = "NvChat_Show_2f9a7c";
+
         private MainViewModel _viewModel;
         private MainWindow _mainWindow;
         private QuickChatWindow _quickWindow;
         private TrayService _tray;
         private HotKeyService _hotKey;
+        private Mutex _instanceMutex;
+        private EventWaitHandle _showSignal;
+        private RegisteredWaitHandle _showWait;
 
         #endregion
 
@@ -29,6 +36,22 @@ namespace NvChat
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
+
+            // 단일 인스턴스: 이미 실행 중이면 기존 인스턴스를 띄우고 종료.
+            // (신호용 이벤트를 뮤텍스보다 먼저 무조건 생성/열어 두어 시작 경합을 없앤다.)
+            _showSignal = new EventWaitHandle(false, EventResetMode.AutoReset, ShowSignalName, out _);
+            _instanceMutex = new Mutex(true, MutexName, out var createdNew);
+
+            if (createdNew == false)
+            {
+                _showSignal.Set();
+                _showSignal.Dispose();
+                _instanceMutex.Dispose();
+                Shutdown();
+                return;
+            }
+
+            _showWait = ThreadPool.RegisterWaitForSingleObject(_showSignal, (_, __) => Dispatcher.BeginInvoke(new Action(ShowMain)), null, Timeout.Infinite, false);
 
             // 창을 닫아도(트레이로 최소화) 앱이 계속 살아있도록 명시적 종료 모드.
             ShutdownMode = ShutdownMode.OnExplicitShutdown;
@@ -116,7 +139,14 @@ namespace NvChat
         private void RegisterHotKey()
         {
             var hotkey = _viewModel?.GetCurrentSettings()?.GlobalHotkey;
-            _hotKey?.Register(hotkey);
+            var registered = _hotKey?.Register(hotkey) ?? false;
+
+            // 다른 앱이 이미 쓰는 조합이면 조용히 죽지 않도록 사용자에게 알린다.
+            var wantsHotkey = string.IsNullOrWhiteSpace(hotkey) == false
+                && hotkey.Equals("끄기", StringComparison.OrdinalIgnoreCase) == false;
+
+            if (registered == false && wantsHotkey && _viewModel != null)
+                _viewModel.StatusMessage = $"전역 단축키({hotkey}) 등록에 실패했습니다. 다른 앱이 사용 중일 수 있어요. 설정에서 다른 조합을 선택하세요.";
         }
 
         /// <summary>트레이 '종료' 등에서 호출되는 실제 앱 종료.</summary>
@@ -124,6 +154,8 @@ namespace NvChat
         {
             try
             {
+                // 실제 종료 경로에서만 진행 중인 스트림을 취소한다(트레이 최소화 시에는 계속 생성).
+                _viewModel?.CancelStreaming();
                 _viewModel?.SaveState();
             }
             catch
@@ -132,6 +164,10 @@ namespace NvChat
 
             _hotKey?.Dispose();
             _tray?.Dispose();
+            _showWait?.Unregister(_showSignal);
+            _showSignal?.Dispose();
+            try { _instanceMutex?.ReleaseMutex(); } catch { }
+            _instanceMutex?.Dispose();
 
             if (_mainWindow != null)
                 _mainWindow.AllowClose = true;

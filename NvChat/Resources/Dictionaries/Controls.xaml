@@ -240,13 +240,13 @@
                                           Margin="{TemplateBinding Padding}"
                                           VerticalScrollBarVisibility="{TemplateBinding VerticalScrollBarVisibility}"
                                           HorizontalScrollBarVisibility="{TemplateBinding HorizontalScrollBarVisibility}" />
-                            <!-- WPF TextBox 는 텍스트를 캐럿 폭만큼 안쪽에서 그리므로 플레이스홀더에 동일한 좌측 인셋(2px)을 준다. -->
+                            <!-- 플레이스홀더는 콘텐츠 호스트와 동일한 Margin 으로 정확히 같은 위치에 둔다(추가 인셋 없음). -->
                             <TextBlock x:Name="Placeholder"
                                        Text="{TemplateBinding Tag}"
                                        Foreground="{StaticResource MutedForegroundBrush}"
                                        FontSize="{TemplateBinding FontSize}"
+                                       FontFamily="{TemplateBinding FontFamily}"
                                        Margin="{TemplateBinding Padding}"
-                                       Padding="2,0,0,0"
                                        IsHitTestVisible="False"
                                        VerticalAlignment="Top"
                                        Visibility="Collapsed" />

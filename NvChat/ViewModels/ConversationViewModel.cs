@@ -36,6 +36,9 @@ namespace NvChat.ViewModels
 
         public GenerationParameters Parameters { get; set; } = new GenerationParameters();
 
+        /// <summary>제목이 확정(사용자 지정 또는 자동 생성 완료)되어 더 이상 자동 생성하지 않음.</summary>
+        public bool TitleLocked { get; set; }
+
         public bool IsEmpty => Messages.Count == 0;
 
         /// <summary>사이드바에 표시할 부제(모델명 · 메시지 수).</summary>
@@ -194,6 +197,7 @@ namespace NvChat.ViewModels
                 ModelId = _modelId,
                 SystemPrompt = _systemPrompt,
                 Pinned = _pinned,
+                TitleLocked = TitleLocked,
                 Parameters = Parameters,
                 Messages = Messages.Select(m => m.ToData()).ToList(),
                 CreatedAt = CreatedAt,
@@ -210,6 +214,7 @@ namespace NvChat.ViewModels
                 ModelId = data.ModelId,
                 SystemPrompt = data.SystemPrompt ?? string.Empty,
                 Pinned = data.Pinned,
+                TitleLocked = data.TitleLocked,
                 Parameters = data.Parameters ?? new GenerationParameters(),
                 CreatedAt = data.CreatedAt == default ? DateTime.Now : data.CreatedAt,
                 UpdatedAt = data.UpdatedAt == default ? DateTime.Now : data.UpdatedAt

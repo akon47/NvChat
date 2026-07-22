@@ -59,7 +59,7 @@
                                       Fill="{StaticResource MutedForegroundBrush}" IsHitTestVisible="False" />
                             </Grid>
                             <ListBox Grid.Row="1" ItemsSource="{Binding ModelsView}" SelectedItem="{Binding SelectedModel}" Background="Transparent" BorderThickness="0"
-                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled" PreviewMouseLeftButtonUp="ModelList_MouseUp">
                                 <ListBox.GroupStyle>
                                     <GroupStyle>
                                         <GroupStyle.HeaderTemplate>
@@ -205,8 +205,12 @@
 
             <!-- 헤더 -->
             <Grid Grid.Row="0" Margin="20,14,20,6">
-                <TextBlock Text="{Binding SelectedConversation.Title}" Foreground="{StaticResource ForegroundBrush}" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="{Binding SelectedConversation.Title}" Foreground="{StaticResource ForegroundBrush}" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,12,0" />
+                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
                     <Button Command="{Binding ToggleAdvancedCommand}" Style="{StaticResource SubtleButtonStyle}" Padding="8" ToolTip="시스템 프롬프트 · 파라미터">
                         <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconTune}" Width="17" Height="17" />
                     </Button>
@@ -289,7 +293,9 @@
                         <ItemsControl.ItemTemplate>
                             <DataTemplate DataType="{x:Type vm:ChatMessageViewModel}">
                                 <Grid x:Name="MsgRow" Margin="0,7">
-                                    <StackPanel x:Name="Column" HorizontalAlignment="Left" MaxWidth="840">
+                                    <!-- Background=Transparent 로 말풍선+여백+(숨겨진)액션 영역 전체를 히트테스트 대상으로 만들어
+                                         마우스를 버튼으로 내려도 호버가 끊기지 않게 한다. -->
+                                    <StackPanel x:Name="Column" HorizontalAlignment="Left" MaxWidth="840" Background="Transparent">
                                         <!-- 말풍선: 내용만 감싼다 -->
                                         <Border x:Name="Bubble" Background="{StaticResource AssistantBubbleBackgroundBrush}" BorderBrush="{StaticResource AssistantBubbleBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="14,10" HorizontalAlignment="Left">
                                             <StackPanel>
@@ -407,15 +413,16 @@
                                             <StopStoryboard BeginStoryboardName="TypingSb" />
                                         </DataTrigger.ExitActions>
                                     </DataTrigger>
+                                    <!-- 호버 트리거를 먼저 두고, 편집 중 숨김을 뒤에 둬서(나중 선언 우선) 편집 중에는 액션바가 뜨지 않게 한다. -->
+                                    <Trigger SourceName="MsgRow" Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="MsgActions" Property="Visibility" Value="Visible" />
+                                    </Trigger>
                                     <DataTrigger Binding="{Binding IsEditing}" Value="True">
                                         <Setter TargetName="EditPanel" Property="Visibility" Value="Visible" />
                                         <Setter TargetName="RawText" Property="Visibility" Value="Collapsed" />
                                         <Setter TargetName="Markdown" Property="Visibility" Value="Collapsed" />
                                         <Setter TargetName="MsgActions" Property="Visibility" Value="Collapsed" />
                                     </DataTrigger>
-                                    <Trigger SourceName="MsgRow" Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="MsgActions" Property="Visibility" Value="Visible" />
-                                    </Trigger>
                                 </DataTemplate.Triggers>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
