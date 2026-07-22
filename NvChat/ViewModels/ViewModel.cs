@@ -6,7 +6,7 @@ using System.Windows.Threading;
 namespace NvChat.ViewModels
 {
     /// <summary>
-    /// 모든 뷰모델의 기반 클래스. (Gaia.ViewModels.ViewModel 스타일의 경량 이식본)
+    /// 모든 뷰모델의 기반 클래스.
     /// </summary>
     public abstract class ViewModel : ObservableObject
     {

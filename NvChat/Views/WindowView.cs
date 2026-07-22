@@ -12,7 +12,7 @@ namespace NvChat.Views
     /// <summary>
     /// 커스텀(보더리스) 크롬을 가진 창의 기반 클래스.
     /// 타이틀바/최소·최대·닫기 버튼은 테마의 컨트롤 템플릿(Window.xaml)이 제공하고,
-    /// 커맨드와 상태 속성은 이 클래스가 제공한다. (Gaia.Views.WindowView 스타일의 경량 이식본)
+    /// 커맨드와 상태 속성은 이 클래스가 제공한다.
     /// </summary>
     public class WindowView : Window
     {

@@ -6,7 +6,6 @@ namespace NvChat.ComponentModel
 {
     /// <summary>
     /// INotifyPropertyChanging/Changed 를 구현하는 관찰 가능한 객체의 기반 클래스.
-    /// (Gaia.ComponentModel.ObservableObject 스타일)
     /// </summary>
     public abstract class ObservableObject : INotifyPropertyChanged, INotifyPropertyChanging
     {

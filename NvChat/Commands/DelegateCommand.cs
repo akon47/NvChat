@@ -4,7 +4,7 @@ using System.Windows.Input;
 namespace NvChat.Commands
 {
     /// <summary>
-    /// 파라미터 없는 <see cref="ICommand"/> 구현. (Gaia.Commands.DelegateCommand 스타일)
+    /// 파라미터 없는 <see cref="ICommand"/> 구현.
     /// </summary>
     public class DelegateCommand : ICommand
     {
