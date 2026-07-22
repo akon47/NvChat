@@ -146,12 +146,14 @@ namespace NvChat.Services
                 throw new InvalidOperationException("실행 파일 경로를 찾을 수 없어 업데이트할 수 없습니다.");
 
             var newPath = exePath + ".new";
-            var oldPath = exePath + ".old";
+            var oldPath = ResolveRetiredPath(exePath);
 
             using var http = CreateClient();
 
             // 1) 다운로드 (같은 폴더에 받아야 이후 이동이 같은 볼륨 내에서 원자적으로 끝난다)
+            //    바탕화면 등에 두고 쓰는 경우가 많으므로 받는 동안에는 숨김 처리해 눈에 띄지 않게 한다.
             await DownloadAsync(http, info.DownloadUrl, newPath, info.Size, progress, cancellationToken).ConfigureAwait(false);
+            TrySetHidden(newPath, true);
 
             // 2) 체크섬 검증 (릴리즈에 sha256 이 함께 올라온 경우)
             if (string.IsNullOrEmpty(info.ChecksumUrl) == false)
@@ -170,6 +172,7 @@ namespace NvChat.Services
             }
 
             // 3) 교체: 실행 중인 exe 는 덮어쓸 수 없지만 이름은 바꿀 수 있다.
+            //    구 버전은 가능하면 %TEMP% 로 밀어내 exe 옆(바탕화면 등)에 잔여 파일이 보이지 않게 한다.
             TryDelete(oldPath);
 
             try
@@ -185,6 +188,7 @@ namespace NvChat.Services
             try
             {
                 File.Move(newPath, exePath);
+                TrySetHidden(exePath, false);
             }
             catch
             {
@@ -200,18 +204,79 @@ namespace NvChat.Services
         }
 
         /// <summary>
-        /// 이전 실행에서 남은 .old 파일을 정리한다. (앱 시작 시 호출)
+        /// 이전 업데이트가 남긴 파일을 정리한다. (앱 시작 시 호출)
+        ///
+        /// 업데이트 직후 재시작한 경우에는 방금 종료 중인 이전 프로세스가 아직 구 exe 이미지를
+        /// 잠그고 있어 곧바로 지워지지 않는다. 그래서 백그라운드에서 잠시 재시도한다.
         /// </summary>
         public static void CleanupLeftovers()
         {
+            var exePath = Environment.ProcessPath;
+            if (string.IsNullOrEmpty(exePath))
+                return;
+
+            _ = Task.Run(async () =>
+            {
+                for (var attempt = 0; attempt < 12; attempt++)
+                {
+                    var remaining = false;
+
+                    // exe 옆에 남은 잔여물 (구 버전이 만들었거나 %TEMP% 로 밀어낼 수 없던 경우)
+                    remaining |= TryDelete(exePath + ".old") == false && File.Exists(exePath + ".old");
+                    remaining |= TryDelete(exePath + ".new") == false && File.Exists(exePath + ".new");
+
+                    // %TEMP% 로 밀어낸 구 버전
+                    try
+                    {
+                        foreach (var file in Directory.EnumerateFiles(Path.GetTempPath(), RetiredPrefix + "*.exe"))
+                            remaining |= TryDelete(file) == false && File.Exists(file);
+                    }
+                    catch
+                    {
+                    }
+
+                    if (remaining == false)
+                        return;
+
+                    await Task.Delay(2000).ConfigureAwait(false);
+                }
+            });
+        }
+
+        /// <summary>
+        /// 구 버전을 밀어낼 경로를 정한다.
+        /// 실행 중인 이미지는 같은 볼륨 안에서만 이동할 수 있으므로,
+        /// %TEMP% 가 같은 드라이브일 때만 그쪽으로 보내고 아니면 exe 옆에 .old 로 둔다.
+        /// </summary>
+        private static string ResolveRetiredPath(string exePath)
+        {
             try
             {
-                var exePath = Environment.ProcessPath;
-                if (string.IsNullOrEmpty(exePath))
+                var temp = Path.GetTempPath();
+
+                if (string.Equals(Path.GetPathRoot(temp), Path.GetPathRoot(exePath), StringComparison.OrdinalIgnoreCase))
+                    return Path.Combine(temp, RetiredPrefix + Guid.NewGuid().ToString("N") + ".exe");
+            }
+            catch
+            {
+            }
+
+            return exePath + ".old";
+        }
+
+        private const string RetiredPrefix = "NvChat.old.";
+
+        private static void TrySetHidden(string path, bool hidden)
+        {
+            try
+            {
+                if (File.Exists(path) == false)
                     return;
 
-                TryDelete(exePath + ".old");
-                TryDelete(exePath + ".new");
+                var attributes = File.GetAttributes(path);
+                File.SetAttributes(path, hidden
+                    ? attributes | FileAttributes.Hidden
+                    : attributes & ~FileAttributes.Hidden);
             }
             catch
             {
@@ -286,16 +351,23 @@ namespace NvChat.Services
             return Convert.ToHexString(sha.ComputeHash(stream)).ToLowerInvariant();
         }
 
-        private static void TryDelete(string path)
+        /// <summary>파일을 지운다. 지웠거나 원래 없으면 true.</summary>
+        private static bool TryDelete(string path)
         {
             try
             {
-                if (File.Exists(path))
-                    File.Delete(path);
+                if (File.Exists(path) == false)
+                    return true;
+
+                // 숨김 속성이 붙어 있으면 먼저 떼어내야 지워진다.
+                File.SetAttributes(path, FileAttributes.Normal);
+                File.Delete(path);
+                return true;
             }
             catch
             {
-                // 아직 잠겨 있으면 다음 실행 때 다시 시도한다.
+                // 아직 잠겨 있으면 호출측이 잠시 뒤 다시 시도한다.
+                return false;
             }
         }
 
