@@ -54,7 +54,8 @@
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="{x:Type vm:ChatMessageViewModel}">
                         <Grid Margin="0,5">
-                            <Border x:Name="Bubble" HorizontalAlignment="Left" MaxWidth="560" Background="{StaticResource AssistantBubbleBackgroundBrush}" BorderBrush="{StaticResource AssistantBubbleBorderBrush}" BorderThickness="1" CornerRadius="10" Padding="12,9">
+                            <!-- 어시스턴트 답변은 말풍선 없이 본문만 놓는다. (메인 창과 동일) -->
+                            <Border x:Name="Bubble" HorizontalAlignment="Left" MaxWidth="560" Background="Transparent" BorderThickness="0" CornerRadius="10" Padding="2,2">
                                 <StackPanel>
                                     <TextBlock x:Name="RawText" Text="{Binding Content}" Foreground="{StaticResource ForegroundBrush}" TextWrapping="Wrap"
                                                Visibility="{Binding ShowMarkdown, Converter={StaticResource InverseBoolToVis}}" />
@@ -75,6 +76,8 @@
                                 <Setter TargetName="Bubble" Property="HorizontalAlignment" Value="Right" />
                                 <Setter TargetName="Bubble" Property="Background" Value="{StaticResource UserBubbleBackgroundBrush}" />
                                 <Setter TargetName="Bubble" Property="BorderBrush" Value="{StaticResource UserBubbleBorderBrush}" />
+                                <Setter TargetName="Bubble" Property="BorderThickness" Value="1" />
+                                <Setter TargetName="Bubble" Property="Padding" Value="12,9" />
                             </DataTrigger>
                             <DataTrigger Binding="{Binding HasError}" Value="True">
                                 <Setter TargetName="RawText" Property="Foreground" Value="{StaticResource ErrorBrush}" />
@@ -82,6 +85,7 @@
                             <DataTrigger Binding="{Binding IsWaiting}" Value="True">
                                 <Setter TargetName="Typing" Property="Visibility" Value="Visible" />
                                 <Setter TargetName="RawText" Property="Visibility" Value="Collapsed" />
+                                <Setter TargetName="Markdown" Property="Visibility" Value="Collapsed" />
                                 <DataTrigger.EnterActions>
                                     <BeginStoryboard x:Name="QSb">
                                         <Storyboard RepeatBehavior="Forever">

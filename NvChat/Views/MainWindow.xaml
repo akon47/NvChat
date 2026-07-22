@@ -403,8 +403,10 @@
                                     <!-- Background=Transparent 로 말풍선+여백+(숨겨진)액션 영역 전체를 히트테스트 대상으로 만들어
                                          마우스를 버튼으로 내려도 호버가 끊기지 않게 한다. -->
                                     <StackPanel x:Name="Column" HorizontalAlignment="Left" Background="Transparent">
-                                        <!-- 말풍선: 내용만 감싼다 -->
-                                        <Border x:Name="Bubble" Background="{StaticResource AssistantBubbleBackgroundBrush}" BorderBrush="{StaticResource AssistantBubbleBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="14,10" HorizontalAlignment="Left">
+                                        <!-- 기본(어시스턴트)은 말풍선을 씌우지 않는다. 클로드/챗GPT 처럼 본문이 그대로 놓인다.
+                                             RichTextBox 는 가용 너비를 전부 요구해서 짧은 답변에도 말풍선이 끝까지 늘어나는데,
+                                             애초에 말풍선이 없으면 그 문제 자체가 사라진다. 말풍선은 사용자 메시지에만 씌운다. -->
+                                        <Border x:Name="Bubble" Background="Transparent" BorderThickness="0" CornerRadius="12" Padding="2,2" HorizontalAlignment="Left">
                                             <StackPanel>
                                                 <!-- 첨부 이미지 -->
                                                 <ItemsControl ItemsSource="{Binding ImageSources}" Margin="0,0,0,8" Visibility="{Binding HasImages, Converter={StaticResource BoolToVis}}">
@@ -485,6 +487,8 @@
                                         <Setter TargetName="Bubble" Property="HorizontalAlignment" Value="Right" />
                                         <Setter TargetName="Bubble" Property="Background" Value="{StaticResource UserBubbleBackgroundBrush}" />
                                         <Setter TargetName="Bubble" Property="BorderBrush" Value="{StaticResource UserBubbleBorderBrush}" />
+                                        <Setter TargetName="Bubble" Property="BorderThickness" Value="1" />
+                                        <Setter TargetName="Bubble" Property="Padding" Value="14,10" />
                                         <Setter TargetName="MsgActions" Property="HorizontalAlignment" Value="Right" />
                                         <Setter TargetName="EditBtn" Property="Visibility" Value="Visible" />
                                     </DataTrigger>
@@ -500,15 +504,20 @@
                                     </DataTrigger>
                                     <DataTrigger Binding="{Binding HasError}" Value="True">
                                         <Setter TargetName="RawText" Property="Foreground" Value="{StaticResource ErrorBrush}" />
+                                        <!-- 오류는 눈에 띄어야 하므로 어시스턴트라도 테두리를 씌운다. -->
                                         <Setter TargetName="Bubble" Property="BorderBrush" Value="{StaticResource ErrorBrush}" />
+                                        <Setter TargetName="Bubble" Property="BorderThickness" Value="1" />
+                                        <Setter TargetName="Bubble" Property="Padding" Value="14,10" />
                                     </DataTrigger>
                                     <DataTrigger Binding="{Binding Aborted}" Value="True">
                                         <Setter TargetName="AbortedChip" Property="Visibility" Value="Visible" />
                                     </DataTrigger>
                                     <DataTrigger Binding="{Binding IsWaiting}" Value="True">
                                         <Setter TargetName="Typing" Property="Visibility" Value="Visible" />
-                                        <!-- 대기 중에는 빈 본문이 한 줄을 차지하지 않도록 숨겨 말풍선을 한 줄 높이로 유지 -->
+                                        <!-- 대기 중에는 빈 본문이 자리를 차지하지 않도록 숨겨 말풍선을 점 크기로 유지.
+                                             마크다운 뷰어도 내용이 비어 있어도 최소 높이와 전체 너비를 잡으므로 함께 숨긴다. -->
                                         <Setter TargetName="RawText" Property="Visibility" Value="Collapsed" />
+                                        <Setter TargetName="Markdown" Property="Visibility" Value="Collapsed" />
                                         <DataTrigger.EnterActions>
                                             <BeginStoryboard x:Name="TypingSb">
                                                 <Storyboard RepeatBehavior="Forever">

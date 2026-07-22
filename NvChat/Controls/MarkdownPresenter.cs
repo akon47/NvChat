@@ -2,6 +2,7 @@ using NvChat.Behaviors;
 using System;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
 using System.Windows.Media;
 using System.Windows.Threading;
 
@@ -142,6 +143,7 @@ namespace NvChat.Controls
                 return;
 
             viewer.Document = MarkdownRenderer.RenderDocument(Markdown);
+
             _dirty = false;
             _lastRebuildTick = Environment.TickCount64;
         }
