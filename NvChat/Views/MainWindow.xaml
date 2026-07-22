@@ -253,6 +253,11 @@
                         </StackPanel>
                     </Border>
 
+                    <!-- 현재 버전. 누르면 수동으로 새 버전을 확인한다. -->
+                    <Button Command="{Binding CheckUpdateCommand}" Style="{StaticResource SubtleButtonStyle}" HorizontalAlignment="Center"
+                            Margin="0,6,0,8" Padding="10,3" ToolTip="클릭하면 새 버전을 확인합니다">
+                        <TextBlock Text="{Binding AppVersionText}" Foreground="{StaticResource MutedForegroundBrush}" FontSize="11" />
+                    </Button>
                     <!-- 잔여 할당량은 API 로 알 수 없으므로(실측 확인) 이 앱이 보낸 사용량만 담백하게 적는다. -->
                 </StackPanel>
             </Grid>

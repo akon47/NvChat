@@ -91,6 +91,40 @@ namespace NvChat.ViewModels
         /// <summary>새 버전이 확인되어 안내 배너를 띄울지 여부.</summary>
         public bool HasUpdate => _update != null;
 
+        /// <summary>사이드바 하단에 표시할 현재 버전. 예: "v1.5.0".</summary>
+        public string AppVersionText => "v" + UpdateService.CurrentVersion.ToString(3);
+
+        private ICommand _checkUpdateCommand;
+
+        /// <summary>버전 표시를 눌렀을 때 수동으로 새 버전을 확인한다.</summary>
+        public ICommand CheckUpdateCommand => _checkUpdateCommand ?? (_checkUpdateCommand = new DelegateCommand(OnCheckUpdate, () => _isUpdating == false));
+
+        private async void OnCheckUpdate()
+        {
+            StatusMessage = "새 버전을 확인하는 중…";
+
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+            var info = await _updateService.CheckAsync(cts.Token);
+
+            if (info == null)
+            {
+                // 문제가 아니라 확인 결과이므로 경고 배너로 계속 남겨 두지 않는다.
+                var message = $"최신 버전입니다. ({AppVersionText})";
+                StatusMessage = message;
+
+                await Task.Delay(TimeSpan.FromSeconds(4));
+
+                if (StatusMessage == message)
+                    StatusMessage = null;
+
+                return;
+            }
+
+            _update = info;
+            StatusMessage = null;
+            RaiseUpdateChanged();
+        }
+
         /// <summary>"새 버전 v1.4.0 이 있습니다 (12.3 MB)" 형태의 안내.</summary>
         public string UpdateText
         {
@@ -210,6 +244,7 @@ namespace NvChat.ViewModels
             RaisePropertyChanged(nameof(HasUpdate));
             RaisePropertyChanged(nameof(UpdateText));
             (_installUpdateCommand as DelegateCommand)?.RaiseCanExecuteChanged();
+            (_checkUpdateCommand as DelegateCommand)?.RaiseCanExecuteChanged();
         }
 
         #endregion
