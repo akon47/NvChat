@@ -28,7 +28,7 @@ Streaming chat · saved conversations · markdown/code rendering · reasoning di
 - **Streaming chat** — real-time token streaming with an instant **Stop** button
 - **Reasoning display** — collapsible thinking for models that emit `reasoning_content` / `<think>` (deepseek-r1, etc.)
 - **Image attachments (vision)** — attach images to ask vision models (llama-3.2-vision, etc.); large images are auto-downscaled
-- **Desktop launcher** — a global hotkey (default `Ctrl+Alt+Space`) pops a **quick-chat mini window** from anywhere + **system tray** (close minimizes to tray)
+- **Desktop launcher** — a global hotkey (default `Ctrl+Shift+Space`) pops a **quick-chat mini window** from anywhere + **system tray** (close minimizes to tray)
 - **Personalization** — **custom instructions** (about you / response style) applied to every chat + reusable **prompt presets**
 - **Searchable model picker** — filter 100+ models by typing
 - **Message actions** — **regenerate** a response, **edit & resend** a user message, **delete** or **copy** individual messages
@@ -60,7 +60,7 @@ It's a self-contained single file that runs even without the .NET runtime instal
 | `Enter` | Send (switchable to `Ctrl+Enter` in Settings) |
 | `Shift+Enter` | New line |
 | `Ctrl+N` | New conversation |
-| `Ctrl+Alt+Space` | Quick chat from anywhere (global · configurable) |
+| `Ctrl+Shift+Space` | Quick chat from anywhere (global · configurable) |
 
 ## 🛠️ Build from source
 

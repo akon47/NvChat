@@ -32,7 +32,7 @@ namespace NvChat.ViewModels
             _generateTitles = current.GenerateTitles;
             _aboutYou = current.AboutYou;
             _responseStyle = current.ResponseStyle;
-            _globalHotkey = string.IsNullOrWhiteSpace(current.GlobalHotkey) ? "Ctrl+Alt+Space" : current.GlobalHotkey;
+            _globalHotkey = string.IsNullOrWhiteSpace(current.GlobalHotkey) ? "Ctrl+Shift+Space" : current.GlobalHotkey;
             _minimizeToTray = current.MinimizeToTrayOnClose;
             Presets = new ObservableCollection<PromptPreset>((current.Presets ?? AppSettings.DefaultPresets()).Select(p => new PromptPreset(p.Name, p.Text)));
             _temperature = parameters.Temperature;
@@ -204,10 +204,11 @@ namespace NvChat.ViewModels
 
         public IReadOnlyList<string> HotkeyOptions { get; } = new[]
         {
+            "Ctrl+Shift+Space",
             "Ctrl+Alt+Space",
             "Alt+Space",
-            "Ctrl+Shift+Space",
             "Ctrl+Alt+N",
+            "Ctrl+Shift+K",
             "끄기"
         };
 

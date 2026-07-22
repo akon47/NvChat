@@ -54,8 +54,9 @@ namespace NvChat.Models
         public List<PromptPreset> Presets { get; set; } = DefaultPresets();
 
         // ===== 데스크톱 런처 =====
-        /// <summary>빠른 채팅 전역 단축키(예: "Ctrl+Alt+Space", "끄기").</summary>
-        public string GlobalHotkey { get; set; } = "Ctrl+Alt+Space";
+        /// <summary>빠른 채팅 전역 단축키(예: "Ctrl+Shift+Space", "끄기").
+        /// Ctrl+Alt+Space 는 다른 앱/IME 가 선점하는 경우가 많아 기본값에서 제외했다.</summary>
+        public string GlobalHotkey { get; set; } = "Ctrl+Shift+Space";
 
         /// <summary>닫기 버튼을 누르면 종료하지 않고 트레이로 최소화.</summary>
         public bool MinimizeToTrayOnClose { get; set; } = true;
