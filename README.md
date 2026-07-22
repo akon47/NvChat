@@ -2,11 +2,11 @@
 
 # NvChat
 
-**[build.nvidia.com](https://build.nvidia.com) 의 무료 LLM 들을 골라 채팅하는 Windows 데스크톱 앱**
+**A Windows desktop app to chat with the free LLMs on [build.nvidia.com](https://build.nvidia.com)**
 
-스트리밍 채팅 · 대화 저장 · 마크다운/코드 렌더링 · 추론(reasoning) 표시 · 이미지 첨부 — 단일 `.exe` 하나로 실행
+Streaming chat · saved conversations · live markdown/code rendering · reasoning display · image attachments · in-app auto-update — ships as a single `.exe`
 
-**한국어** · [English](README.en.md)
+**English** · [한국어](README.ko.md)
 
 [![build](https://github.com/akon47/NvChat/actions/workflows/build.yml/badge.svg)](https://github.com/akon47/NvChat/actions/workflows/build.yml)
 [![release](https://img.shields.io/github/v/release/akon47/NvChat?label=release&color=76B900)](https://github.com/akon47/NvChat/releases/latest)
@@ -16,98 +16,90 @@
 ![.NET](https://img.shields.io/badge/.NET-8.0-512BD4)
 ![platform](https://img.shields.io/badge/platform-Windows-0078D6)
 
-<img src="docs/screenshot.png" alt="NvChat 스크린샷" width="880">
+<img src="docs/screenshot.png" alt="NvChat screenshot" width="880">
 
 </div>
 
 ---
 
-## ✨ 특징
+## ✨ Features
 
-- **모델 선택** — `/v1/models` 로 실제 사용 가능한 모델 목록을 불러와 상단에서 선택(실패 시 대표 모델로 폴백)
-- **스트리밍 채팅** — 토큰 단위 실시간 표시, **중단** 버튼으로 즉시 취소
-- **추론(reasoning) 표시** — `reasoning_content` / `<think>` 지원 모델(deepseek-r1 등)의 사고 과정을 접이식으로 표시
-- **이미지 첨부(비전 모델)** — 이미지를 첨부해 비전 모델(llama-3.2-vision 등)에 질문 (자동 축소 후 전송)
-- **데스크톱 런처** — 전역 단축키(기본 `Ctrl+Shift+Space`)로 어디서든 뜨는 **빠른 채팅 미니창** + **시스템 트레이**(닫으면 트레이로 최소화)
-- **개인화** — 모든 대화에 자동 적용되는 **커스텀 지침**(나에 대해 / 응답 방식) + 재사용 **프롬프트 프리셋**
-- **검색 가능한 모델 선택기** — 100개+ 모델을 타이핑으로 필터링해 선택
-- **메시지 액션** — 응답 **다시 생성**, 사용자 메시지 **편집 후 재생성**, 개별 **삭제**, **복사**
-- **마크다운 렌더링** — 제목/목록/중첩·체크리스트/인용/**표**/링크, **구문 강조된 코드블록**(복사 버튼)
-- **대화 관리** — 사이드바 **검색**, **날짜별 그룹**(오늘/어제/…), **고정**, **이름 변경**, 자동 저장, 모델 기반 **제목 자동 생성**
-- **대화별 설정** — 시스템 프롬프트, Temperature/Top P/Max Tokens/Penalty 조절
-- **내보내기** — 대화 전체 복사 / Markdown 파일로 저장
-- **편의** — 맨 아래로 스크롤 버튼, 창 크기/위치 기억, 사이드바 접기, 단축키
-- **안전한 저장** — API 키는 Windows DPAPI 로 암호화, 원자적 파일 쓰기 + 손상 파일 자동 백업
-- **UI** — 커스텀 보더리스 다크 테마(NVIDIA 그린 액센트)
+- **Model picker** — loads the live model list via `/v1/models` (falls back to a curated list on failure)
+- **Streaming chat** — real-time token streaming with an instant **Stop** button
+- **Live markdown while streaming** — formatting renders as the answer arrives (like Claude / ChatGPT), not only when it finishes
+- **Reasoning display** — collapsible thinking for models that emit `reasoning_content` / `<think>` (deepseek-r1, etc.)
+- **Image attachments (vision)** — attach images to ask vision models (llama-3.2-vision, etc.); large images are auto-downscaled
+- **In-app auto-update** — checks GitHub Releases, downloads the new `.exe`, verifies its SHA-256, and swaps itself in place (single-file friendly, no installer)
+- **Per-conversation usage** — tracks requests and prompt/completion tokens **per model**, so you can see what each model spent in a conversation (even across mid-chat model switches)
+- **Desktop launcher** — a global hotkey (default `Ctrl+Shift+Space`) pops a **quick-chat mini window** from anywhere + **system tray** (close minimizes to tray)
+- **Personalization** — **custom instructions** (about you / response style) applied to every chat + reusable **prompt presets**
+- **Searchable model picker** — filter 100+ models by typing
+- **Message actions** — **regenerate** a response, **edit & resend** a user message, **delete** or **copy** individual messages
+- **Selectable markdown** — headings/lists/nested & task lists/quotes/**tables**/links, **syntax-highlighted code blocks** with a copy button; assistant text is drag-selectable
+- **Conversation management** — sidebar **search**, **date groups** (Today/Yesterday/…), **pin**, **rename**, autosave, model-generated **auto titles**
+- **Per-conversation settings** — system prompt, Temperature/Top P/Max Tokens/Penalties
+- **Export** — copy the whole conversation or save as Markdown
+- **Quality of life** — scroll-to-bottom button, remembers window size/position, collapsible sidebar, keyboard shortcuts
+- **Safe storage** — API key encrypted with Windows DPAPI, atomic file writes + automatic backup of corrupt files
+- **UI** — custom borderless dark theme with an NVIDIA-green accent; ChatGPT/Claude-style layout (bubble only on your messages)
 
-## 📦 다운로드
+## 📦 Download
 
-[**Releases**](https://github.com/akon47/NvChat/releases/latest) 에서 `NvChat.exe` **파일 하나**만 내려받아 실행하면 됩니다.
-.NET 런타임이 없어도 실행되는 self-contained 단일 실행 파일입니다. (Windows x64)
+Grab the single `NvChat.exe` from [**Releases**](https://github.com/akon47/NvChat/releases/latest) and run it.
+It's a self-contained single file that runs even without the .NET runtime installed. (Windows x64)
 
-## 🔑 API 키 발급
+> Once you're on a build with auto-update, new versions are offered inside the app — no need to re-download manually.
 
-1. [build.nvidia.com](https://build.nvidia.com) 에 로그인
-2. 아무 모델 페이지에서 **Get API Key** 로 `nvapi-...` 키 발급
-3. 앱 첫 실행 시 뜨는 **설정** 창(또는 우상단 ⚙)에 키를 붙여넣고 **연결 테스트 → 저장**
+## 🔑 Get an API key
 
-> 키는 **이 PC + 이 Windows 계정에만** DPAPI 로 암호화되어 저장됩니다(`%APPDATA%\NvChat\settings.json`). 다른 PC/계정에서는 복호화되지 않습니다.
+1. Sign in to [build.nvidia.com](https://build.nvidia.com)
+2. On any model page, click **Get API Key** to create an `nvapi-...` key
+3. Paste it into the **Settings** window on first launch (or the ⚙ button), then **Test connection → Save**
 
-## ⌨️ 단축키
+> The key is stored **only on this PC + this Windows account**, encrypted with DPAPI (`%APPDATA%\NvChat\settings.json`). It cannot be decrypted on another PC/account.
 
-| 키 | 동작 |
+## ⌨️ Shortcuts
+
+| Key | Action |
 |---|---|
-| `Enter` | 전송 (설정에서 `Ctrl+Enter` 전송으로 변경 가능) |
-| `Shift+Enter` | 줄바꿈 |
-| `Ctrl+N` | 새 대화 |
-| `Ctrl+Shift+Space` | 어디서든 빠른 채팅 (전역 · 설정에서 변경) |
+| `Enter` | Send (switchable to `Ctrl+Enter` in Settings) |
+| `Shift+Enter` | New line |
+| `Ctrl+N` | New conversation |
+| `Ctrl+Shift+Space` | Quick chat from anywhere (global · configurable) |
 
-## 🛠️ 소스에서 빌드
+## 🛠️ Build from source
 
 ```powershell
-# 개발 실행
+# Run for development
 dotnet run --project NvChat/NvChat.csproj
 
-# 단일 exe 배포 빌드 (파일 하나 생성)
+# Build the single-file release exe
 dotnet publish NvChat/NvChat.csproj -c Release
 # → NvChat/bin/Release/net8.0-windows/win-x64/publish/NvChat.exe
 ```
 
-요구 사항: .NET 8 SDK (Windows).
+Requires the .NET 8 SDK (Windows).
 
-## 🚀 릴리스 (자동 배포)
+## 🚀 Releases (automated)
 
-`v*` 형식의 태그를 푸시하면 GitHub Actions([`release.yml`](.github/workflows/release.yml))가
-단일 `NvChat.exe` 를 빌드해 해당 태그의 Release 에 자동 업로드합니다.
+Pushing a `v*` tag triggers a GitHub Actions workflow ([`release.yml`](.github/workflows/release.yml)) that
+builds the single `NvChat.exe`, publishes a matching `NvChat.exe.sha256`, and uploads both to that tag's Release.
+The app's in-app updater uses that checksum to verify downloads.
 
 ```bash
 git tag v1.0.0
 git push origin v1.0.0
 ```
 
-## 📁 프로젝트 구조
+## 🧩 Tech
 
-```
-NvChat/
-  ComponentModel/  ObservableObject
-  Commands/        DelegateCommand, AsyncDelegateCommand
-  ViewModels/      Main / Settings / Conversation / ChatMessage / Window
-  Models/          AppSettings, Conversation, ChatMessage, NvModel, GenerationParameters
-  Services/        NvidiaClient(스트리밍), Settings/ConversationStore, SecureText(DPAPI), AtomicFile
-  Controls/        MarkdownRenderer, CodeHighlighter, MarkdownPresenter
-  Converters/  Behaviors/  Views/(WindowView 커스텀 크롬)  Resources/(테마)
-```
+.NET 8 / WPF (`net8.0-windows`), MVVM, a custom `WindowView` (borderless WindowChrome), a dark palette, and a
+self-written markdown renderer + syntax highlighter — no external UI libraries.
 
-- 엔드포인트: `https://integrate.api.nvidia.com/v1` (OpenAI 호환, 설정에서 변경 가능)
-- 데이터 저장: `%APPDATA%\NvChat\` (`settings.json`, `conversations.json`)
-- 무료 티어에는 NVIDIA 측 요청 한도가 있어, 429 응답 시 잠시 후 재시도하세요.
+- Endpoint: `https://integrate.api.nvidia.com/v1` (OpenAI-compatible, configurable in Settings)
+- Data: `%APPDATA%\NvChat\` (`settings.json`, `conversations.json`)
+- The free tier has rate limits — on HTTP 429, retry after a moment.
 
-## 🧩 기술
+## 📄 License
 
-.NET 8 / WPF (`net8.0-windows`). MVVM 구조와 커스텀 `WindowView`(WindowChrome 보더리스 크롬),
-다크 팔레트, 자체 마크다운 렌더러/구문 강조기를 외부 UI 라이브러리 없이 구현했습니다.
-(개인 WPF 공통 라이브러리의 코드 컨벤션을 참고했으나 해당 DLL 은 참조하지 않습니다.)
-
-## 📄 라이선스
-
-[MIT](LICENSE) — 자유롭게 사용/수정/배포할 수 있습니다. (원하는 라이선스로 바꿔도 됩니다.)
+[MIT](LICENSE) — free to use, modify, and distribute.
