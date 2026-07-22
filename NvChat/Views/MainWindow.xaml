@@ -254,8 +254,6 @@
                     </Border>
 
                     <!-- 잔여 할당량은 API 로 알 수 없으므로(실측 확인) 이 앱이 보낸 사용량만 담백하게 적는다. -->
-                    <TextBlock Text="{Binding UsageTodayText}" ToolTip="{Binding UsageTooltip}"
-                               Foreground="{StaticResource MutedForegroundBrush}" FontSize="11" HorizontalAlignment="Center" Margin="0,8,0,10" />
                 </StackPanel>
             </Grid>
         </Border>
@@ -300,6 +298,32 @@
             <Border Grid.Row="1" Margin="20,4,20,4" Padding="16" Background="{StaticResource CardBackgroundBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="10"
                     Visibility="{Binding IsAdvancedOpen, Converter={StaticResource BoolToVis}}">
                 <StackPanel>
+                    <!-- 이 대화의 모델별 사용량. 대화 중 모델을 바꾸면 항목이 늘어난다. -->
+                    <StackPanel Margin="0,0,0,16" Visibility="{Binding SelectedConversation.HasUsage, Converter={StaticResource BoolToVis}}">
+                        <Grid Margin="0,0,0,7">
+                            <TextBlock Text="이 대화의 사용량" Foreground="{StaticResource SecondaryForegroundBrush}" FontSize="12" />
+                            <TextBlock Text="{Binding SelectedConversation.UsageSummary}" HorizontalAlignment="Right" Foreground="{StaticResource MutedForegroundBrush}" FontSize="11.5" />
+                        </Grid>
+                        <ItemsControl ItemsSource="{Binding SelectedConversation.Usage}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,0,0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" Margin="0,0,12,0">
+                                            <TextBlock Text="{Binding ShortName}" Foreground="{StaticResource ForegroundBrush}" FontSize="12.5" TextTrimming="CharacterEllipsis" ToolTip="{Binding ModelId}" />
+                                            <TextBlock Text="{Binding DetailText}" Foreground="{StaticResource MutedForegroundBrush}" FontSize="11" Margin="0,1,0,0" />
+                                        </StackPanel>
+                                        <TextBlock Grid.Column="1" Text="{Binding TotalText}" Foreground="{StaticResource AccentBrush}" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <Border Height="1" Background="{StaticResource BorderBrush}" Margin="0,10,0,0" />
+                    </StackPanel>
+
                     <TextBlock Text="시스템 프롬프트" Foreground="{StaticResource SecondaryForegroundBrush}" FontSize="12" Margin="0,0,0,5" />
                     <TextBox Text="{Binding SelectedConversation.SystemPrompt, UpdateSourceTrigger=PropertyChanged}" Tag="이 대화에서 AI의 역할/지침 (선택)" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="54" MaxHeight="120" VerticalScrollBarVisibility="Auto" />
                     <Grid Margin="0,14,0,0">

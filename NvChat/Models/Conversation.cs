@@ -25,6 +25,9 @@ namespace NvChat.Models
 
         public List<ChatMessage> Messages { get; set; } = new List<ChatMessage>();
 
+        /// <summary>이 대화에서 모델별로 쓴 요청/토큰 수.</summary>
+        public List<ModelUsage> Usage { get; set; } = new List<ModelUsage>();
+
         public DateTime CreatedAt { get; set; }
 
         public DateTime UpdatedAt { get; set; }

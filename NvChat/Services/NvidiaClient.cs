@@ -49,31 +49,6 @@ namespace NvChat.Services
         #endregion
 
 
-        #region Events
-
-        /// <inheritdoc />
-        public event EventHandler<ChatUsage> UsageReported;
-
-        /// <summary>
-        /// 채팅 요청 한 건이 끝났음을 알린다. usage 가 없으면 요청 수만 집계된다.
-        /// </summary>
-        private void PublishUsage(TokenUsage usage)
-        {
-            try
-            {
-                UsageReported?.Invoke(this, usage == null
-                    ? new ChatUsage(0, 0, false)
-                    : new ChatUsage(usage.PromptTokens, usage.CompletionTokens, true));
-            }
-            catch
-            {
-                // 부가 정보이므로 실패해도 본 흐름에 영향을 주지 않는다.
-            }
-        }
-
-        #endregion
-
-
         #region Fields
 
         private readonly Func<AppSettings> _settingsAccessor;
@@ -118,7 +93,7 @@ namespace NvChat.Services
             using var httpRequest = new HttpRequestMessage(HttpMethod.Post, CombineUrl(settings.BaseUrl, "chat/completions"));
             httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", settings.ApiKey);
             httpRequest.Headers.Accept.ParseAdd("text/event-stream");
-            httpRequest.Content = new StringContent(json, Encoding.UTF8, "application/json");
+            httpRequest.Content = CreateJsonContent(json);
 
             using var response = await _http
                 .SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
@@ -133,9 +108,6 @@ namespace NvChat.Services
             using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
             using var reader = new StreamReader(stream, Encoding.UTF8);
 
-            TokenUsage usage = null;
-
-            try
             {
                 while (true)
                 {
@@ -161,18 +133,14 @@ namespace NvChat.Services
                     if (TryParseStreamError(data, out var streamError))
                         throw new NvidiaApiException(streamError);
 
+                    // 사용량은 choices 가 빈 마지막 청크에 따로 온다.
                     var chunkUsage = TryParseUsage(data);
                     if (chunkUsage != null)
-                        usage = chunkUsage;
+                        yield return new ChatStreamDelta(null, null, null, new ChatUsage(chunkUsage.PromptTokens, chunkUsage.CompletionTokens, true));
 
                     if (TryParseDelta(data, out var delta))
                         yield return delta;
                 }
-            }
-            finally
-            {
-                // 중간에 취소되어도 이미 보낸 요청은 소모된 것이므로 집계한다.
-                PublishUsage(usage);
             }
         }
 
@@ -256,7 +224,7 @@ namespace NvChat.Services
             }
         }
 
-        public async Task<string> CompleteChatAsync(
+        public async Task<ChatCompletionOutcome> CompleteChatAsync(
             string model,
             IEnumerable<ChatMessage> messages,
             GenerationParameters parameters,
@@ -281,7 +249,7 @@ namespace NvChat.Services
 
             using var httpRequest = new HttpRequestMessage(HttpMethod.Post, CombineUrl(settings.BaseUrl, "chat/completions"));
             httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", settings.ApiKey);
-            httpRequest.Content = new StringContent(json, Encoding.UTF8, "application/json");
+            httpRequest.Content = CreateJsonContent(json);
 
             using var response = await _http.SendAsync(httpRequest, cancellationToken).ConfigureAwait(false);
 
@@ -290,10 +258,13 @@ namespace NvChat.Services
                 throw new NvidiaApiException(BuildErrorMessage((int)response.StatusCode, body, response));
 
             var parsed = JsonSerializer.Deserialize<ChatCompletionResponse>(body, _jsonOptions);
-            PublishUsage(parsed?.Usage);
 
             var message = parsed?.Choices != null && parsed.Choices.Count > 0 ? parsed.Choices[0].Message : null;
-            return message?.Content ?? string.Empty;
+            var usage = parsed?.Usage;
+
+            return new ChatCompletionOutcome(
+                message?.Content ?? string.Empty,
+                usage == null ? default : new ChatUsage(usage.PromptTokens, usage.CompletionTokens, true));
         }
 
         #endregion
@@ -374,6 +345,21 @@ namespace NvChat.Services
                 case ChatRole.Assistant: return "assistant";
                 default: return "user";
             }
+        }
+
+        /// <summary>
+        /// JSON 본문을 만든다.
+        ///
+        /// StringContent(json, Encoding.UTF8, "application/json") 은 Content-Type 을
+        /// "application/json; charset=utf-8" 로 보내는데, 일부 모델 엔드포인트가 이를 거부하고
+        /// 415 (Unsupported media type ... It must be application/json) 를 돌려준다.
+        /// 본문은 UTF-8 로 쓰되 charset 파라미터는 떼어낸다.
+        /// </summary>
+        private static StringContent CreateJsonContent(string json)
+        {
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+            content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+            return content;
         }
 
         private static string CombineUrl(string baseUrl, string relative)

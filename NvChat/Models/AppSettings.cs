@@ -61,9 +61,6 @@ namespace NvChat.Models
         /// <summary>닫기 버튼을 누르면 종료하지 않고 트레이로 최소화.</summary>
         public bool MinimizeToTrayOnClose { get; set; } = true;
 
-        /// <summary>로컬 사용량 집계(누적/오늘 요청 수·토큰 수).</summary>
-        public UsageStats Usage { get; set; } = new UsageStats();
-
         /// <summary>시작할 때 GitHub Releases 에서 새 버전을 확인할지 여부.</summary>
         public bool AutoCheckUpdates { get; set; } = true;
 

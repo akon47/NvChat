@@ -31,7 +31,6 @@ namespace NvChat.ViewModels
             _conversationStore = new ConversationStore();
             _settings = _settingsStore.Load();
             _client = new NvidiaClient(() => _settings);
-            _client.UsageReported += OnUsageReported;
 
             Attachments = new ObservableCollection<AttachmentViewModel>();
             Attachments.CollectionChanged += (_, __) =>
@@ -39,8 +38,6 @@ namespace NvChat.ViewModels
                 RaisePropertyChanged(nameof(HasAttachments));
                 _sendCommand?.RaiseCanExecuteChanged();
             };
-
-            StartUsageTimer();
         }
 
         #endregion
@@ -213,116 +210,6 @@ namespace NvChat.ViewModels
             RaisePropertyChanged(nameof(HasUpdate));
             RaisePropertyChanged(nameof(UpdateText));
             (_installUpdateCommand as DelegateCommand)?.RaiseCanExecuteChanged();
-        }
-
-        #endregion
-
-
-        #region Usage meter
-
-        // build.nvidia.com 은 잔여 할당량을 응답 헤더로도, 별도 API 로도 알려주지 않는다(실측 확인).
-        // 무료 크레딧은 '매일 리셋'이 아니라 가입 시 지급되어 누적 소모되는 구조이므로
-        // 게이지도 누적 요청 수를 기준으로 삼고, 분모(크레딧 수)는 사용자가 설정에서 넣는다.
-        private DispatcherTimer _usageTimer;
-
-        /// <summary>"오늘 12회 · 8.4k 토큰" 형태의 사용량 표시.</summary>
-        public string UsageTodayText
-        {
-            get
-            {
-                var stats = _settings.Usage;
-                var tokens = stats.TotalTokensToday;
-
-                var tokenText = tokens <= 0
-                    ? "0 토큰"
-                    : tokens < 10000
-                        ? $"{tokens:N0} 토큰"
-                        : $"{tokens / 1000.0:0.#}k 토큰";
-
-                return $"오늘 {stats.Requests:N0}회 · {tokenText}";
-            }
-        }
-
-        public string UsageTooltip
-        {
-            get
-            {
-                var stats = _settings.Usage;
-                var since = stats.CountingSince.HasValue
-                    ? stats.CountingSince.Value.ToString("yyyy-MM-dd HH:mm") + " 부터"
-                    : "설치 후";
-
-                return
-                    "이 앱에서 보낸 요청만 센 값입니다.\n" +
-                    "build.nvidia.com 은 잔여 할당량을 API 로도 계정 페이지에서도\n" +
-                    "알려주지 않습니다. (차감되는 잔액이 아니라 분당 요청 제한 방식)\n\n" +
-                    $"누적 {stats.TotalRequests:N0}회 ({since})\n" +
-                    $"누적 토큰 입력 {stats.TotalPromptTokens:N0} · 출력 {stats.TotalCompletionTokens:N0}";
-            }
-        }
-
-        private void OnUsageReported(object sender, ChatUsage usage)
-        {
-            var dispatcher = Application.Current?.Dispatcher;
-
-            if (dispatcher != null && dispatcher.CheckAccess() == false)
-            {
-                dispatcher.BeginInvoke(new Action(() => OnUsageReported(sender, usage)));
-                return;
-            }
-
-            var stats = _settings.Usage;
-            stats.ResetTodayIfStale();
-
-            if (stats.CountingSince.HasValue == false)
-                stats.CountingSince = DateTime.Now;
-
-            stats.TotalRequests++;
-            stats.Requests++;
-
-            if (usage.HasTokens)
-            {
-                stats.TotalPromptTokens += usage.PromptTokens;
-                stats.TotalCompletionTokens += usage.CompletionTokens;
-                stats.PromptTokens += usage.PromptTokens;
-                stats.CompletionTokens += usage.CompletionTokens;
-            }
-
-            RaiseUsageChanged();
-            SaveSettingsQuietly();
-        }
-
-        /// <summary>
-        /// '오늘' 카운터의 날짜 경계를 감시한다. (누적은 건드리지 않는다)
-        /// </summary>
-        private void StartUsageTimer()
-        {
-            if (_usageTimer != null)
-                return;
-
-            _settings.Usage.ResetTodayIfStale();
-
-            _usageTimer = new DispatcherTimer(DispatcherPriority.Background)
-            {
-                Interval = TimeSpan.FromSeconds(30)
-            };
-            _usageTimer.Tick += (_, __) =>
-            {
-                if (_settings.Usage.ResetTodayIfStale())
-                {
-                    SaveSettingsQuietly();
-                    RaiseUsageChanged();
-                }
-            };
-            _usageTimer.Start();
-
-            RaiseUsageChanged();
-        }
-
-        private void RaiseUsageChanged()
-        {
-            RaisePropertyChanged(nameof(UsageTodayText));
-            RaisePropertyChanged(nameof(UsageTooltip));
         }
 
         #endregion
@@ -721,11 +608,6 @@ namespace NvChat.ViewModels
             settings.WindowHeight = _settings.WindowHeight;
             settings.WindowMaximized = _settings.WindowMaximized;
 
-            // 사용량 집계는 설정 창이 열려 있는 동안에도 계속 쌓인다.
-            // 초기화를 요청한 경우에만 새 집계가 넘어오고, 그 외에는 살아 있는 값을 유지한다.
-            if (settings.Usage == null)
-                settings.Usage = _settings.Usage;
-
             _settings = settings;
             _settingsStore.Save(_settings);
 
@@ -733,7 +615,6 @@ namespace NvChat.ViewModels
             RaisePropertyChanged(nameof(SendOnEnter));
             RaisePropertyChanged(nameof(MinimizeToTrayOnClose));
             RaisePropertyChanged(nameof(Presets));
-            RaiseUsageChanged();
             RaiseCommandStates();
 
             if (HasStatusMessage && HasApiKey)
@@ -1193,6 +1074,7 @@ namespace NvChat.ViewModels
             StatusMessage = null;
 
             var aborted = false;
+            var usageRecorded = false;
 
             try
             {
@@ -1201,6 +1083,12 @@ namespace NvChat.ViewModels
 
                 await foreach (var delta in _client.StreamChatAsync(modelId, apiMessages, conversation.Parameters, _streamCts.Token))
                 {
+                    if (delta.Usage.HasTokens)
+                    {
+                        usageRecorded = true;
+                        conversation.AddUsage(modelId, delta.Usage.PromptTokens, delta.Usage.CompletionTokens, true);
+                    }
+
                     if (string.IsNullOrEmpty(delta.FinishReason) == false)
                         finishReason = delta.FinishReason;
 
@@ -1241,6 +1129,10 @@ namespace NvChat.ViewModels
             }
             finally
             {
+                // 서버가 토큰 수를 안 주거나 중간에 끊겨도 요청 한 건은 실제로 나갔으므로 횟수는 남긴다.
+                if (usageRecorded == false)
+                    conversation.AddUsage(modelId, 0, 0, false);
+
                 if (aborted)
                 {
                     // 빈 채로 중단되면 자리표시자를 제거하고, 부분 응답이 있으면 유지하되 '중단됨'만 표시.
@@ -1323,9 +1215,12 @@ namespace NvChat.ViewModels
                 };
 
                 using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(25));
-                var raw = await _client.CompleteChatAsync(modelId, prompt, new GenerationParameters { MaxTokens = 24, Temperature = 0.3, TopP = 1.0 }, cts.Token);
+                var outcome = await _client.CompleteChatAsync(modelId, prompt, new GenerationParameters { MaxTokens = 24, Temperature = 0.3, TopP = 1.0 }, cts.Token);
 
-                var title = CleanTitle(raw);
+                // 제목 생성도 실제로 나간 요청이므로 이 대화의 사용량에 포함한다.
+                conversation.AddUsage(modelId, outcome.Usage.PromptTokens, outcome.Usage.CompletionTokens, outcome.Usage.HasTokens);
+
+                var title = CleanTitle(outcome.Content);
                 if (string.IsNullOrWhiteSpace(title) == false)
                 {
                     conversation.Title = title;

@@ -21,6 +21,8 @@ namespace NvChat.ViewModels
 
             Messages = new ObservableCollection<ChatMessageViewModel>();
             Messages.CollectionChanged += Messages_CollectionChanged;
+
+            Usage = new ObservableCollection<ModelUsage>();
         }
 
         #endregion
@@ -40,6 +42,58 @@ namespace NvChat.ViewModels
         public bool TitleLocked { get; set; }
 
         public bool IsEmpty => Messages.Count == 0;
+
+        /// <summary>이 대화에서 모델별로 쓴 요청/토큰. 대화 중 모델을 바꾸면 항목이 늘어난다.</summary>
+        public ObservableCollection<ModelUsage> Usage { get; }
+
+        public bool HasUsage => Usage.Count > 0;
+
+        /// <summary>"합계 12.4k 토큰 · 8회" 형태의 요약.</summary>
+        public string UsageSummary
+        {
+            get
+            {
+                if (Usage.Count == 0)
+                    return null;
+
+                var tokens = Usage.Sum(u => u.TotalTokens);
+                var requests = Usage.Sum(u => u.Requests);
+
+                return $"합계 {ModelUsage.FormatTokens(tokens)} 토큰 · {requests:N0}회";
+            }
+        }
+
+        /// <summary>
+        /// 이 대화의 사용량에 한 건을 더한다. 모델별로 나누어 쌓는다.
+        /// </summary>
+        public void AddUsage(string modelId, int promptTokens, int completionTokens, bool hasTokens)
+        {
+            if (string.IsNullOrWhiteSpace(modelId))
+                modelId = "(알 수 없음)";
+
+            var entry = Usage.FirstOrDefault(u => string.Equals(u.ModelId, modelId, StringComparison.OrdinalIgnoreCase));
+
+            if (entry == null)
+            {
+                entry = new ModelUsage { ModelId = modelId };
+                Usage.Add(entry);
+            }
+
+            entry.Requests++;
+
+            if (hasTokens)
+            {
+                entry.PromptTokens += promptTokens;
+                entry.CompletionTokens += completionTokens;
+            }
+
+            // ModelUsage 는 POCO 라 개별 알림이 없으므로 목록을 다시 그리게 한다.
+            var index = Usage.IndexOf(entry);
+            Usage[index] = entry;
+
+            RaisePropertyChanged(nameof(HasUsage));
+            RaisePropertyChanged(nameof(UsageSummary));
+        }
 
         /// <summary>사이드바에 표시할 부제(모델명 · 메시지 수).</summary>
         public string Subtitle
@@ -210,6 +264,7 @@ namespace NvChat.ViewModels
                 TitleLocked = TitleLocked,
                 Parameters = Parameters,
                 Messages = Messages.Select(m => m.ToData()).ToList(),
+                Usage = Usage.ToList(),
                 CreatedAt = CreatedAt,
                 UpdatedAt = _updatedAt
             };
@@ -234,6 +289,12 @@ namespace NvChat.ViewModels
             {
                 foreach (var message in data.Messages)
                     vm.Messages.Add(ChatMessageViewModel.FromData(message));
+            }
+
+            if (data.Usage != null)
+            {
+                foreach (var usage in data.Usage.Where(u => u != null && string.IsNullOrWhiteSpace(u.ModelId) == false))
+                    vm.Usage.Add(usage);
             }
 
             return vm;

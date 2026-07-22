@@ -12,11 +12,6 @@ namespace NvChat.Services
     public interface INvidiaClient
     {
         /// <summary>
-        /// 채팅 요청 한 건이 끝날 때마다 발생한다. (로컬 사용량 집계용)
-        /// </summary>
-        event EventHandler<ChatUsage> UsageReported;
-
-        /// <summary>
         /// 채팅 완성을 스트리밍으로 받아 델타(본문/추론)를 순차적으로 반환한다.
         /// </summary>
         IAsyncEnumerable<ChatStreamDelta> StreamChatAsync(
@@ -26,9 +21,9 @@ namespace NvChat.Services
             CancellationToken cancellationToken);
 
         /// <summary>
-        /// 채팅 완성을 한 번에(비스트리밍) 받아 전체 본문을 반환한다. (제목 자동 생성 등)
+        /// 채팅 완성을 한 번에(비스트리밍) 받아 본문과 사용량을 반환한다. (제목 자동 생성 등)
         /// </summary>
-        Task<string> CompleteChatAsync(
+        Task<ChatCompletionOutcome> CompleteChatAsync(
             string model,
             IEnumerable<ChatMessage> messages,
             GenerationParameters parameters,

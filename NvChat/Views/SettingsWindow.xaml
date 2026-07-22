@@ -95,14 +95,6 @@
                 <TextBlock Foreground="{StaticResource MutedForegroundBrush}" FontSize="11.5" TextWrapping="Wrap"
                            Text="새 버전이 있으면 메인 창 상단에 안내가 뜹니다. '지금 업데이트'를 누르면 GitHub Releases 에서 내려받아 체크섬을 확인한 뒤 실행 파일을 교체하고 재시작합니다." />
 
-                <!-- 사용량 -->
-                <TextBlock Text="사용량" Foreground="{StaticResource ForegroundBrush}" FontSize="14" FontWeight="SemiBold" Margin="0,18,0,6" />
-                <TextBlock Foreground="{StaticResource MutedForegroundBrush}" FontSize="11.5" TextWrapping="Wrap" Margin="0,0,0,10"
-                           Text="build.nvidia.com 은 잔여 할당량을 알려주지 않습니다(API·계정 페이지 모두). 차감되는 잔액이 아니라 분당 요청 제한 방식이라서, 아래 값은 이 앱에서 보낸 요청을 직접 센 참고용 수치입니다." />
-                <Grid>
-                    <TextBlock Text="{Binding UsageSummary}" Foreground="{StaticResource SecondaryForegroundBrush}" FontSize="12.5" VerticalAlignment="Center" />
-                    <Button HorizontalAlignment="Right" Content="사용량 초기화" Command="{Binding ResetUsageCommand}" Padding="12,5" /></Grid>
-
                 <Border Height="1" Background="{StaticResource BorderBrush}" Margin="0,20,0,16" />
 
                 <!-- 커스텀 지침 -->
