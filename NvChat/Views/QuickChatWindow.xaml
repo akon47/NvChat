@@ -25,10 +25,9 @@
     >
     <views:WindowView.TitleBarContent>
         <Grid Margin="6,0,4,0">
+            <!-- 브랜드 아이콘과 창 제목("빠른 채팅")은 창 템플릿이 이미 그리므로 여기서는 모델명만 표시한다. -->
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
-                <Image Source="pack://application:,,,/NvChat;component/Resources/brand.png" Width="18" Height="18" RenderOptions.BitmapScalingMode="HighQuality" />
-                <TextBlock Text="빠른 채팅" Foreground="{StaticResource ForegroundBrush}" FontSize="12.5" FontWeight="SemiBold" VerticalAlignment="Center" Margin="8,0,0,0" />
-                <TextBlock Text="{Binding SelectedModel.Name}" Foreground="{StaticResource MutedForegroundBrush}" FontSize="11.5" VerticalAlignment="Center" Margin="10,0,0,0" TextTrimming="CharacterEllipsis" MaxWidth="220" />
+                <TextBlock Text="{Binding SelectedModel.Name}" Foreground="{StaticResource MutedForegroundBrush}" FontSize="11.5" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="240" />
             </StackPanel>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" WindowChrome.IsHitTestVisibleInChrome="True">
                 <Button Click="OpenMain_Click" Style="{StaticResource SubtleButtonStyle}" Padding="8,5" ToolTip="메인 창 열기">

@@ -14,7 +14,7 @@
     <AssemblyTitle>NvChat</AssemblyTitle>
     <Product>NvChat</Product>
     <Company>NvChat</Company>
-    <Version>1.2.4</Version>
+    <Version>1.2.5</Version>
     <NeutralLanguage>ko-KR</NeutralLanguage>
     <ApplicationIcon>Resources\app.ico</ApplicationIcon>
     <!-- WPF 는 app.manifest 의 PerMonitorV2 를 사용. WinForms(트레이용) 활성화로 뜨는 DPI 경고만 억제. -->
