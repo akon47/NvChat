@@ -246,6 +246,22 @@
                                     <Border x:Name="Bubble" HorizontalAlignment="Left" MaxWidth="860"
                                             Background="{StaticResource AssistantBubbleBackgroundBrush}" BorderBrush="{StaticResource AssistantBubbleBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="14,10">
                                         <StackPanel>
+                                            <!-- 첨부 이미지 -->
+                                            <ItemsControl ItemsSource="{Binding ImageSources}" Margin="0,0,0,8"
+                                                          Visibility="{Binding HasImages, Converter={StaticResource BoolToVis}}">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Border CornerRadius="8" Margin="0,0,6,6" ClipToBounds="True" MaxHeight="240" MaxWidth="300"
+                                                                BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                                                            <Image Source="{Binding}" Stretch="Uniform" />
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+
                                             <!-- 추론(Reasoning) 섹션 -->
                                             <StackPanel x:Name="ReasoningBox" Visibility="Collapsed" Margin="0,0,0,8">
                                                 <Button Command="{Binding ToggleReasoningCommand}" Style="{StaticResource SubtleButtonStyle}" HorizontalAlignment="Left" Padding="6,3">
@@ -387,30 +403,59 @@
 
             <!-- 입력 -->
             <Border Grid.Row="4" Margin="20,6,20,16" Padding="6" Background="{StaticResource ControlBackgroundBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="14">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <TextBox Grid.Column="0" x:Name="InputBox" Text="{Binding InputText, UpdateSourceTrigger=PropertyChanged}"
-                             Tag="메시지를 입력하세요…   (Enter 전송 · Shift+Enter 줄바꿈)" Background="Transparent" BorderThickness="0"
-                             AcceptsReturn="True" TextWrapping="Wrap" MaxHeight="200" VerticalScrollBarVisibility="Auto" VerticalAlignment="Center" PreviewKeyDown="InputBox_PreviewKeyDown" />
+                <StackPanel>
+                    <!-- 첨부 미리보기 -->
+                    <ItemsControl ItemsSource="{Binding Attachments}" Margin="6,4,6,2"
+                                  Visibility="{Binding HasAttachments, Converter={StaticResource BoolToVis}}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,0,6,4" Width="64" Height="64">
+                                    <Border CornerRadius="6" ClipToBounds="True" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                                        <Image Source="{Binding Preview}" Stretch="UniformToFill" />
+                                    </Border>
+                                    <Button Command="{Binding DataContext.RemoveAttachmentCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"
+                                            Style="{StaticResource SubtleButtonStyle}" Content="✕" FontSize="10" Foreground="White" Background="#B0000000"
+                                            Width="18" Height="18" Padding="0" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,-6,-6,0" ToolTip="제거" />
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
 
-                    <Button Grid.Column="1" Command="{Binding SendCommand}" Style="{StaticResource AccentButtonStyle}" Margin="6,0,2,0" Padding="16,8" VerticalAlignment="Bottom"
-                            Visibility="{Binding IsSelectedStreaming, Converter={StaticResource InverseBoolToVis}}">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="전송" VerticalAlignment="Center" />
-                            <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="12" Text="&#xE725;" Margin="7,0,0,0" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </Button>
-                    <Button Grid.Column="1" Command="{Binding StopCommand}" Style="{StaticResource {x:Type Button}}" Margin="6,0,2,0" Padding="16,8" VerticalAlignment="Bottom"
-                            Visibility="{Binding IsSelectedStreaming, Converter={StaticResource BoolToVis}}">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="12" Text="&#xE71A;" VerticalAlignment="Center" Foreground="{StaticResource ErrorBrush}" />
-                            <TextBlock Text="중단" Margin="7,0,0,0" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </Button>
-                </Grid>
+                    <!-- 입력 행 -->
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <Button Grid.Column="0" Command="{Binding AttachImageCommand}" Style="{StaticResource SubtleButtonStyle}"
+                                FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="16" Content="&#xE723;" Padding="8"
+                                VerticalAlignment="Bottom" ToolTip="이미지 첨부 (비전 모델 선택 필요)" />
+
+                        <TextBox Grid.Column="1" x:Name="InputBox" Text="{Binding InputText, UpdateSourceTrigger=PropertyChanged}"
+                                 Tag="메시지를 입력하세요…   (Enter 전송 · Shift+Enter 줄바꿈)" Background="Transparent" BorderThickness="0"
+                                 AcceptsReturn="True" TextWrapping="Wrap" MaxHeight="200" VerticalScrollBarVisibility="Auto" VerticalAlignment="Center" PreviewKeyDown="InputBox_PreviewKeyDown" />
+
+                        <Button Grid.Column="2" Command="{Binding SendCommand}" Style="{StaticResource AccentButtonStyle}" Margin="6,0,2,0" Padding="16,8" VerticalAlignment="Bottom"
+                                Visibility="{Binding IsSelectedStreaming, Converter={StaticResource InverseBoolToVis}}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="전송" VerticalAlignment="Center" />
+                                <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="12" Text="&#xE725;" Margin="7,0,0,0" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                        <Button Grid.Column="2" Command="{Binding StopCommand}" Style="{StaticResource {x:Type Button}}" Margin="6,0,2,0" Padding="16,8" VerticalAlignment="Bottom"
+                                Visibility="{Binding IsSelectedStreaming, Converter={StaticResource BoolToVis}}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="12" Text="&#xE71A;" VerticalAlignment="Center" Foreground="{StaticResource ErrorBrush}" />
+                                <TextBlock Text="중단" Margin="7,0,0,0" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+                </StackPanel>
             </Border>
         </Grid>
     </Grid>

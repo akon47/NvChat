@@ -30,6 +30,13 @@ namespace NvChat.ViewModels
             _conversationStore = new ConversationStore();
             _settings = _settingsStore.Load();
             _client = new NvidiaClient(() => _settings);
+
+            Attachments = new ObservableCollection<AttachmentViewModel>();
+            Attachments.CollectionChanged += (_, __) =>
+            {
+                RaisePropertyChanged(nameof(HasAttachments));
+                _sendCommand?.RaiseCanExecuteChanged();
+            };
         }
 
         #endregion
@@ -73,6 +80,11 @@ namespace NvChat.ViewModels
         public ObservableCollection<ConversationViewModel> Conversations { get; } = new ObservableCollection<ConversationViewModel>();
 
         public ObservableCollection<NvModel> Models { get; } = new ObservableCollection<NvModel>();
+
+        /// <summary>전송 대기 중인 첨부 이미지.</summary>
+        public ObservableCollection<AttachmentViewModel> Attachments { get; }
+
+        public bool HasAttachments => Attachments.Count > 0;
 
         /// <summary>사이드바용 그룹/정렬/검색 뷰.</summary>
         public ICollectionView ConversationsView
@@ -299,6 +311,12 @@ namespace NvChat.ViewModels
 
         private DelegateCommand _exportConversationCommand;
         public ICommand ExportConversationCommand => _exportConversationCommand ?? (_exportConversationCommand = new DelegateCommand(OnExportConversation, () => _selectedConversation != null && _selectedConversation.Messages.Count > 0));
+
+        private DelegateCommand _attachImageCommand;
+        public ICommand AttachImageCommand => _attachImageCommand ?? (_attachImageCommand = new DelegateCommand(OnAttachImage, () => _isStreaming == false));
+
+        private DelegateCommand<AttachmentViewModel> _removeAttachmentCommand;
+        public ICommand RemoveAttachmentCommand => _removeAttachmentCommand ?? (_removeAttachmentCommand = new DelegateCommand<AttachmentViewModel>(a => { if (a != null) Attachments.Remove(a); }));
 
         #endregion
 
@@ -637,13 +655,15 @@ namespace NvChat.ViewModels
         {
             return _isStreaming == false
                 && _selectedConversation != null
-                && string.IsNullOrWhiteSpace(_inputText) == false;
+                && (string.IsNullOrWhiteSpace(_inputText) == false || Attachments.Count > 0);
         }
 
         private async Task SendAsync()
         {
             var text = (_inputText ?? string.Empty).Trim();
-            if (text.Length == 0 || _selectedConversation == null || _isStreaming)
+            var hasImages = Attachments.Count > 0;
+
+            if ((text.Length == 0 && hasImages == false) || _selectedConversation == null || _isStreaming)
                 return;
 
             if (HasApiKey == false)
@@ -656,13 +676,42 @@ namespace NvChat.ViewModels
             var conversation = _selectedConversation;
 
             var userMessage = new ChatMessageViewModel(ChatRole.User, text);
+            if (hasImages)
+                userMessage.SetImages(Attachments.Select(a => a.DataUri).ToList());
+
             conversation.Messages.Add(userMessage);
             InputText = string.Empty;
+            Attachments.Clear();
 
             if (conversation.Messages.Count(m => m.IsUser) == 1)
-                conversation.Title = MakeTitle(text);
+                conversation.Title = text.Length > 0 ? MakeTitle(text) : "이미지 대화";
 
             await GenerateResponseAsync(conversation);
+        }
+
+        private void OnAttachImage()
+        {
+            var dialog = new OpenFileDialog
+            {
+                Multiselect = true,
+                Filter = "이미지 (*.png;*.jpg;*.jpeg;*.gif;*.bmp;*.webp)|*.png;*.jpg;*.jpeg;*.gif;*.bmp;*.webp|모든 파일 (*.*)|*.*"
+            };
+
+            if (dialog.ShowDialog() != true)
+                return;
+
+            foreach (var file in dialog.FileNames)
+            {
+                try
+                {
+                    var dataUri = ImageUtil.FileToDataUri(file);
+                    Attachments.Add(new AttachmentViewModel(dataUri, ImageUtil.FromDataUri(dataUri)));
+                }
+                catch (Exception ex)
+                {
+                    StatusMessage = "이미지를 불러오지 못했습니다: " + ex.Message;
+                }
+            }
         }
 
         private void OnUseExamplePrompt(string prompt)
@@ -945,10 +994,15 @@ namespace NvChat.ViewModels
                 if (message.HasError)
                     continue;
 
-                if (string.IsNullOrEmpty(message.Content))
+                if (string.IsNullOrEmpty(message.Content) && message.HasImages == false)
                     continue;
 
-                messages.Add(new ChatMessage { Role = message.Role, Content = message.Content });
+                messages.Add(new ChatMessage
+                {
+                    Role = message.Role,
+                    Content = message.Content,
+                    Images = message.HasImages ? message.Images.ToList() : null
+                });
             }
 
             return messages;
@@ -1062,6 +1116,7 @@ namespace NvChat.ViewModels
             _submitEditCommand?.RaiseCanExecuteChanged();
             _copyConversationCommand?.RaiseCanExecuteChanged();
             _exportConversationCommand?.RaiseCanExecuteChanged();
+            _attachImageCommand?.RaiseCanExecuteChanged();
         }
 
         #endregion

@@ -243,11 +243,23 @@ namespace NvChat.Services
 
         private static ChatMessagePayload ToPayload(ChatMessage message)
         {
-            return new ChatMessagePayload
+            var role = ToRoleString(message.Role);
+
+            // 이미지가 있으면 멀티모달 콘텐츠 파트 배열로 전송(비전 모델).
+            if (message.Images != null && message.Images.Count > 0)
             {
-                Role = ToRoleString(message.Role),
-                Content = message.Content ?? string.Empty
-            };
+                var parts = new List<object>();
+
+                if (string.IsNullOrEmpty(message.Content) == false)
+                    parts.Add(new TextContentPart { Text = message.Content });
+
+                foreach (var image in message.Images)
+                    parts.Add(new ImageContentPart { ImageUrl = new ImageUrlValue { Url = image } });
+
+                return new ChatMessagePayload { Role = role, Content = parts };
+            }
+
+            return new ChatMessagePayload { Role = role, Content = message.Content ?? string.Empty };
         }
 
         private static string ToRoleString(ChatRole role)

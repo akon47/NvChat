@@ -38,8 +38,33 @@ namespace NvChat.Services.Api
         [JsonPropertyName("role")]
         public string Role { get; set; }
 
+        // 텍스트만이면 string, 이미지가 있으면 콘텐츠 파트 배열(List&lt;object&gt;)이 들어간다.
         [JsonPropertyName("content")]
-        public string Content { get; set; }
+        public object Content { get; set; }
+    }
+
+    internal sealed class TextContentPart
+    {
+        [JsonPropertyName("type")]
+        public string Type => "text";
+
+        [JsonPropertyName("text")]
+        public string Text { get; set; }
+    }
+
+    internal sealed class ImageContentPart
+    {
+        [JsonPropertyName("type")]
+        public string Type => "image_url";
+
+        [JsonPropertyName("image_url")]
+        public ImageUrlValue ImageUrl { get; set; }
+    }
+
+    internal sealed class ImageUrlValue
+    {
+        [JsonPropertyName("url")]
+        public string Url { get; set; }
     }
 
     /// <summary>

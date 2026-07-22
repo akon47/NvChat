@@ -32,8 +32,18 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.inputs.tag || github.ref_name }}
-          name: ${{ github.event.inputs.tag || github.ref_name }}
+          name: NvChat ${{ github.event.inputs.tag || github.ref_name }}
           draft: false
           generate_release_notes: true
           fail_on_unmatched_files: true
           files: publish/NvChat.exe
+          body: |
+            ## NvChat ${{ github.event.inputs.tag || github.ref_name }}
+
+            아래 **`NvChat.exe`** 하나만 내려받아 실행하세요. (.NET 설치 불필요 · Windows x64)
+            Download the single **`NvChat.exe`** below and run it. (No .NET required · Windows x64)
+
+            > 첫 실행 시 [build.nvidia.com](https://build.nvidia.com) API 키가 필요합니다 — 설정 창에서 입력하세요.
+            > A [build.nvidia.com](https://build.nvidia.com) API key is required on first launch — enter it in Settings.
+
+            ---

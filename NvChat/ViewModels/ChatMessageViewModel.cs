@@ -1,8 +1,12 @@
 using NvChat.Commands;
 using NvChat.Models;
+using NvChat.Services;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Media;
 
 namespace NvChat.ViewModels
 {
@@ -27,6 +31,8 @@ namespace NvChat.ViewModels
 
         private readonly ChatRole _role;
         private bool _collapsedReasoningOnContent;
+        private List<string> _images;
+        private IReadOnlyList<ImageSource> _imageSources;
 
         #endregion
 
@@ -47,6 +53,22 @@ namespace NvChat.ViewModels
         public bool HasReasoning => string.IsNullOrWhiteSpace(_reasoning) == false;
 
         public string TimestampText => _timestamp.ToString("HH:mm");
+
+        public bool HasImages => _images != null && _images.Count > 0;
+
+        public IReadOnlyList<string> Images => _images;
+
+        /// <summary>표시용으로 디코딩된 이미지 소스(지연 생성).</summary>
+        public IReadOnlyList<ImageSource> ImageSources
+        {
+            get
+            {
+                if (_imageSources == null && _images != null)
+                    _imageSources = _images.Select(ImageUtil.FromDataUri).Where(s => s != null).ToList();
+
+                return _imageSources ?? Array.Empty<ImageSource>();
+            }
+        }
 
         #endregion
 
@@ -238,6 +260,15 @@ namespace NvChat.ViewModels
             }
         }
 
+        /// <summary>첨부 이미지(data URI)를 설정한다.</summary>
+        public void SetImages(IEnumerable<string> images)
+        {
+            _images = images?.Where(s => string.IsNullOrEmpty(s) == false).ToList();
+            _imageSources = null;
+            RaisePropertyChanged(nameof(HasImages));
+            RaisePropertyChanged(nameof(ImageSources));
+        }
+
         public ChatMessage ToData()
         {
             return new ChatMessage
@@ -245,17 +276,23 @@ namespace NvChat.ViewModels
                 Role = _role,
                 Content = _content,
                 Reasoning = _reasoning,
+                Images = _images,
                 Timestamp = _timestamp
             };
         }
 
         public static ChatMessageViewModel FromData(ChatMessage data)
         {
-            return new ChatMessageViewModel(data.Role, data.Content)
+            var viewModel = new ChatMessageViewModel(data.Role, data.Content)
             {
                 Reasoning = data.Reasoning,
                 Timestamp = data.Timestamp == default ? DateTime.Now : data.Timestamp
             };
+
+            if (data.Images != null && data.Images.Count > 0)
+                viewModel.SetImages(data.Images);
+
+            return viewModel;
         }
 
         #endregion
