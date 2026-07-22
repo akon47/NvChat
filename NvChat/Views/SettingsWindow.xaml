@@ -86,6 +86,14 @@
                 <CheckBox Content="Enter 키로 전송 (끄면 Ctrl+Enter 로 전송, Enter 는 줄바꿈)" IsChecked="{Binding SendOnEnter}" Margin="0,0,0,10" />
                 <CheckBox Content="첫 응답 후 대화 제목 자동 생성" IsChecked="{Binding GenerateTitles}" />
 
+                <!-- 사용량 -->
+                <TextBlock Text="사용량" Foreground="{StaticResource ForegroundBrush}" FontSize="14" FontWeight="SemiBold" Margin="0,18,0,6" />
+                <TextBlock Foreground="{StaticResource MutedForegroundBrush}" FontSize="11.5" TextWrapping="Wrap" Margin="0,0,0,10"
+                           Text="build.nvidia.com 은 남은 크레딧을 API 로 알려주지 않습니다. 아래 값은 이 앱에서 보낸 요청만 센 것이며, 실제 잔여량은 build.nvidia.com 계정 페이지에서 확인하세요." />
+                <Grid>
+                    <TextBlock Text="{Binding UsageSummary}" Foreground="{StaticResource SecondaryForegroundBrush}" FontSize="12.5" VerticalAlignment="Center" />
+                    <Button HorizontalAlignment="Right" Content="사용량 초기화" Command="{Binding ResetUsageCommand}" Padding="12,5" /></Grid>
+
                 <Border Height="1" Background="{StaticResource BorderBrush}" Margin="0,20,0,16" />
 
                 <!-- 커스텀 지침 -->

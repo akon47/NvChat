@@ -1,4 +1,5 @@
 using NvChat.Models;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,6 +11,11 @@ namespace NvChat.Services
     /// </summary>
     public interface INvidiaClient
     {
+        /// <summary>
+        /// 채팅 요청 한 건이 끝날 때마다 발생한다. (로컬 사용량 집계용)
+        /// </summary>
+        event EventHandler<ChatUsage> UsageReported;
+
         /// <summary>
         /// 채팅 완성을 스트리밍으로 받아 델타(본문/추론)를 순차적으로 반환한다.
         /// </summary>

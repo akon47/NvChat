@@ -31,6 +31,31 @@ namespace NvChat.Services.Api
 
         [JsonPropertyName("stream")]
         public bool Stream { get; set; }
+
+        /// <summary>스트리밍에서도 마지막 청크에 usage 를 실어 달라고 요청한다. (미지원 서버는 무시)</summary>
+        [JsonPropertyName("stream_options")]
+        public StreamOptions StreamOptions { get; set; }
+    }
+
+    internal sealed class StreamOptions
+    {
+        [JsonPropertyName("include_usage")]
+        public bool IncludeUsage { get; set; }
+    }
+
+    /// <summary>
+    /// 토큰 사용량. 스트리밍에서는 choices 가 빈 마지막 청크에 담겨 온다.
+    /// </summary>
+    internal sealed class TokenUsage
+    {
+        [JsonPropertyName("prompt_tokens")]
+        public int PromptTokens { get; set; }
+
+        [JsonPropertyName("completion_tokens")]
+        public int CompletionTokens { get; set; }
+
+        [JsonPropertyName("total_tokens")]
+        public int TotalTokens { get; set; }
     }
 
     internal sealed class ChatMessagePayload
@@ -74,6 +99,9 @@ namespace NvChat.Services.Api
     {
         [JsonPropertyName("choices")]
         public List<ChunkChoice> Choices { get; set; }
+
+        [JsonPropertyName("usage")]
+        public TokenUsage Usage { get; set; }
     }
 
     internal sealed class ChunkChoice
@@ -102,6 +130,9 @@ namespace NvChat.Services.Api
     {
         [JsonPropertyName("choices")]
         public List<ResponseChoice> Choices { get; set; }
+
+        [JsonPropertyName("usage")]
+        public TokenUsage Usage { get; set; }
     }
 
     internal sealed class ResponseChoice

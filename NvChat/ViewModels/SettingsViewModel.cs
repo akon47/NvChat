@@ -34,6 +34,7 @@ namespace NvChat.ViewModels
             _responseStyle = current.ResponseStyle;
             _globalHotkey = string.IsNullOrWhiteSpace(current.GlobalHotkey) ? "Ctrl+Shift+Space" : current.GlobalHotkey;
             _minimizeToTray = current.MinimizeToTrayOnClose;
+            _usage = current.Usage ?? new UsageStats();
             Presets = new ObservableCollection<PromptPreset>((current.Presets ?? AppSettings.DefaultPresets()).Select(p => new PromptPreset(p.Name, p.Text)));
             _temperature = parameters.Temperature;
             _topP = parameters.TopP;
@@ -277,6 +278,40 @@ namespace NvChat.ViewModels
 
         public ICommand RemovePresetCommand => _removePresetCommand ?? (_removePresetCommand = new DelegateCommand<PromptPreset>(p => { if (p != null) Presets.Remove(p); }));
 
+
+        private ICommand _resetUsageCommand;
+
+        /// <summary>누적 사용량 카운터를 0 부터 다시 시작한다. (크레딧을 새로 받았을 때)</summary>
+        public ICommand ResetUsageCommand => _resetUsageCommand ?? (_resetUsageCommand = new DelegateCommand(OnResetUsage));
+
+        private void OnResetUsage()
+        {
+            _resetUsage = true;
+            RaisePropertyChanged(nameof(UsageSummary));
+        }
+
+        #endregion
+
+
+        #region Bindable Properties - 사용량
+
+        private readonly UsageStats _usage;
+        private bool _resetUsage;
+
+        /// <summary>현재까지의 누적 사용량 요약.</summary>
+        public string UsageSummary
+        {
+            get
+            {
+                if (_resetUsage)
+                    return "저장하면 누적 0회부터 다시 셉니다.";
+
+                var tokens = _usage.TotalPromptTokens + _usage.TotalCompletionTokens;
+                var tokenText = tokens < 10000 ? $"{tokens:N0}" : $"{tokens / 1000.0:0.#}k";
+                return $"누적 {_usage.TotalRequests:N0}회 · {tokenText} 토큰";
+            }
+        }
+
         #endregion
 
 
@@ -298,6 +333,8 @@ namespace NvChat.ViewModels
                 ResponseStyle = _responseStyle ?? string.Empty,
                 GlobalHotkey = string.IsNullOrWhiteSpace(_globalHotkey) ? "끄기" : _globalHotkey,
                 MinimizeToTrayOnClose = _minimizeToTray,
+                // null = 사용량 집계를 건드리지 않음(설정 창이 열린 동안에도 계속 쌓이므로 살아 있는 값을 유지한다).
+                Usage = _resetUsage ? new UsageStats { CountingSince = DateTime.Now, Date = UsageStats.Today } : null,
                 Presets = Presets
                     .Where(p => string.IsNullOrWhiteSpace(p.Name) == false)
                     .Select(p => new PromptPreset(p.Name.Trim(), p.Text ?? string.Empty))

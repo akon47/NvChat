@@ -61,6 +61,10 @@ namespace NvChat.Models
         /// <summary>닫기 버튼을 누르면 종료하지 않고 트레이로 최소화.</summary>
         public bool MinimizeToTrayOnClose { get; set; } = true;
 
+        /// <summary>로컬 사용량 집계(누적/오늘 요청 수·토큰 수).</summary>
+        public UsageStats Usage { get; set; } = new UsageStats();
+
+
         // ===== 창 상태(위치/크기) 복원용 =====
         public double? WindowLeft { get; set; }
         public double? WindowTop { get; set; }

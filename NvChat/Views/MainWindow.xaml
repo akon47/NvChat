@@ -10,6 +10,7 @@
     xmlns:behaviors="clr-namespace:NvChat.Behaviors"
     mc:Ignorable="d"
     Title="NvChat"
+    ShowTitleText="False"
     Width="1160"
     Height="780"
     MinWidth="900"
@@ -28,7 +29,7 @@
         <Grid Margin="4,0,4,0">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
                 <Button Command="{Binding ToggleSidebarCommand}" Style="{StaticResource SubtleButtonStyle}" Padding="8" ToolTip="사이드바 토글">
-                    <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconMenu}" Width="19" Height="19" />
+                    <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconSidebar}" Width="18" Height="18" />
                 </Button>
 
                 <!-- 모델 선택기 -->
@@ -148,11 +149,17 @@
                                 </Grid.ColumnDefinitions>
 
                                 <StackPanel x:Name="DisplayPanel" Grid.Column="0">
-                                    <StackPanel Orientation="Horizontal">
-                                        <Path Data="{StaticResource IconPin}" Width="11" Height="11" Stretch="Uniform" Fill="{StaticResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,5,0"
+                                    <!-- StackPanel 은 자식에게 무한 폭을 주어 TextTrimming 이 동작하지 않으므로 Grid 로 폭을 제한한다. -->
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Path Grid.Column="0" Data="{StaticResource IconPin}" Width="11" Height="11" Stretch="Uniform" Fill="{StaticResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,5,0"
                                               Visibility="{Binding Pinned, Converter={StaticResource BoolToVis}}" />
-                                        <TextBlock Text="{Binding Title}" Foreground="{StaticResource ForegroundBrush}" FontSize="13" TextTrimming="CharacterEllipsis" />
-                                    </StackPanel>
+                                        <TextBlock Grid.Column="1" Text="{Binding Title}" Foreground="{StaticResource ForegroundBrush}" FontSize="13"
+                                                   TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" ToolTip="{Binding Title}" />
+                                    </Grid>
                                     <Grid Margin="0,2,0,0">
                                         <TextBlock x:Name="ConvSubtitle" Text="{Binding Subtitle}" Foreground="{StaticResource MutedForegroundBrush}" FontSize="11" TextTrimming="CharacterEllipsis" />
                                         <!-- 응답 생성 중 표시 -->
@@ -213,7 +220,12 @@
                     </ListBox.ItemTemplate>
                 </ListBox>
 
-                <TextBlock Grid.Row="3" Text="build.nvidia.com · 무료 LLM" Foreground="{StaticResource MutedForegroundBrush}" FontSize="11" HorizontalAlignment="Center" Margin="0,8,0,10" />
+                <StackPanel Grid.Row="3">
+                    <!-- 잔여 할당량은 API 로 알 수 없으므로(실측 확인) 이 앱이 보낸 사용량만 담백하게 적는다. -->
+                    <TextBlock Text="{Binding UsageTodayText}" ToolTip="{Binding UsageTooltip}"
+                               Foreground="{StaticResource MutedForegroundBrush}" FontSize="11" HorizontalAlignment="Center" Margin="0,8,0,2" />
+                    <TextBlock Text="build.nvidia.com · 무료 LLM" Foreground="{StaticResource MutedForegroundBrush}" FontSize="11" HorizontalAlignment="Center" Margin="0,0,0,10" Opacity="0.7" />
+                </StackPanel>
             </Grid>
         </Border>
 

@@ -6,14 +6,21 @@ namespace NvChat.Services
     /// </summary>
     public readonly struct ChatStreamDelta
     {
-        public ChatStreamDelta(string content, string reasoning)
+        public ChatStreamDelta(string content, string reasoning, string finishReason = null)
         {
             Content = content;
             Reasoning = reasoning;
+            FinishReason = finishReason;
         }
 
         public string Content { get; }
 
         public string Reasoning { get; }
+
+        /// <summary>
+        /// 종료 사유(stop / length / content_filter 등). 마지막 청크에만 들어온다.
+        /// 본문이 비어 있을 때 원인을 설명하는 데 쓴다.
+        /// </summary>
+        public string FinishReason { get; }
     }
 }

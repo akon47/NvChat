@@ -49,6 +49,31 @@ namespace NvChat.Services
         #endregion
 
 
+        #region Events
+
+        /// <inheritdoc />
+        public event EventHandler<ChatUsage> UsageReported;
+
+        /// <summary>
+        /// 채팅 요청 한 건이 끝났음을 알린다. usage 가 없으면 요청 수만 집계된다.
+        /// </summary>
+        private void PublishUsage(TokenUsage usage)
+        {
+            try
+            {
+                UsageReported?.Invoke(this, usage == null
+                    ? new ChatUsage(0, 0, false)
+                    : new ChatUsage(usage.PromptTokens, usage.CompletionTokens, true));
+            }
+            catch
+            {
+                // 부가 정보이므로 실패해도 본 흐름에 영향을 주지 않는다.
+            }
+        }
+
+        #endregion
+
+
         #region Fields
 
         private readonly Func<AppSettings> _settingsAccessor;
@@ -83,7 +108,9 @@ namespace NvChat.Services
                 MaxTokens = parameters.MaxTokens,
                 FrequencyPenalty = parameters.FrequencyPenalty,
                 PresencePenalty = parameters.PresencePenalty,
-                Messages = messages.Select(ToPayload).ToList()
+                Messages = messages.Select(ToPayload).ToList(),
+                // 스트리밍에서도 마지막 청크에 토큰 사용량을 실어 달라고 요청한다.
+                StreamOptions = new StreamOptions { IncludeUsage = true }
             };
 
             var json = JsonSerializer.Serialize(request, _jsonOptions);
@@ -100,33 +127,104 @@ namespace NvChat.Services
             if (response.IsSuccessStatusCode == false)
             {
                 var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-                throw new NvidiaApiException(BuildErrorMessage((int)response.StatusCode, body));
+                throw new NvidiaApiException(BuildErrorMessage((int)response.StatusCode, body, response));
             }
 
             using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
             using var reader = new StreamReader(stream, Encoding.UTF8);
 
-            while (true)
+            TokenUsage usage = null;
+
+            try
             {
-                cancellationToken.ThrowIfCancellationRequested();
+                while (true)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
 
-                var line = await reader.ReadLineAsync(cancellationToken).ConfigureAwait(false);
-                if (line == null)
-                    break;
+                    var line = await reader.ReadLineAsync(cancellationToken).ConfigureAwait(false);
+                    if (line == null)
+                        break;
 
-                line = line.Trim();
-                if (line.Length == 0)
-                    continue;
+                    line = line.Trim();
+                    if (line.Length == 0)
+                        continue;
 
-                if (line.StartsWith("data:", StringComparison.Ordinal) == false)
-                    continue;
+                    if (line.StartsWith("data:", StringComparison.Ordinal) == false)
+                        continue;
 
-                var data = line.Substring("data:".Length).Trim();
-                if (data == "[DONE]")
-                    break;
+                    var data = line.Substring("data:".Length).Trim();
+                    if (data == "[DONE]")
+                        break;
 
-                if (TryParseDelta(data, out var delta))
-                    yield return delta;
+                    // 200 으로 시작한 뒤 본문 안에 에러 객체를 흘려보내는 경우가 있다.
+                    // 그냥 무시하면 "빈 응답"처럼 보이므로 실제 사유를 올려 보낸다.
+                    if (TryParseStreamError(data, out var streamError))
+                        throw new NvidiaApiException(streamError);
+
+                    var chunkUsage = TryParseUsage(data);
+                    if (chunkUsage != null)
+                        usage = chunkUsage;
+
+                    if (TryParseDelta(data, out var delta))
+                        yield return delta;
+                }
+            }
+            finally
+            {
+                // 중간에 취소되어도 이미 보낸 요청은 소모된 것이므로 집계한다.
+                PublishUsage(usage);
+            }
+        }
+
+        /// <summary>
+        /// 청크에 담긴 토큰 사용량을 읽는다. (stream_options.include_usage 지원 서버만)
+        /// </summary>
+        private static TokenUsage TryParseUsage(string data)
+        {
+            if (data.IndexOf("\"usage\"", StringComparison.Ordinal) < 0)
+                return null;
+
+            try
+            {
+                var chunk = JsonSerializer.Deserialize<ChatCompletionChunk>(data, _jsonOptions);
+                return chunk?.Usage;
+            }
+            catch (JsonException)
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// SSE 본문에 실려 온 에러 페이로드인지 확인한다. (choices 가 있는 정상 청크는 제외)
+        /// </summary>
+        private static bool TryParseStreamError(string data, out string message)
+        {
+            message = null;
+
+            if (data.IndexOf("\"error\"", StringComparison.Ordinal) < 0)
+                return false;
+
+            try
+            {
+                using var doc = JsonDocument.Parse(data);
+
+                if (doc.RootElement.ValueKind != JsonValueKind.Object)
+                    return false;
+
+                if (doc.RootElement.TryGetProperty("choices", out _))
+                    return false;
+
+                var detail = TryExtractErrorDetail(data);
+                if (string.IsNullOrWhiteSpace(detail))
+                    return false;
+
+                message = detail;
+                return true;
+            }
+            catch (JsonException)
+            {
+                return false;
             }
         }
 
@@ -137,14 +235,18 @@ namespace NvChat.Services
             try
             {
                 var chunk = JsonSerializer.Deserialize<ChatCompletionChunk>(data, _jsonOptions);
-                var d = chunk?.Choices != null && chunk.Choices.Count > 0 ? chunk.Choices[0].Delta : null;
-                if (d == null)
+                var choice = chunk?.Choices != null && chunk.Choices.Count > 0 ? chunk.Choices[0] : null;
+                if (choice == null)
                     return false;
 
-                if (string.IsNullOrEmpty(d.Content) && string.IsNullOrEmpty(d.ReasoningContent))
+                var content = choice.Delta?.Content;
+                var reasoning = choice.Delta?.ReasoningContent;
+
+                // 본문이 없어도 종료 사유가 있으면 전달한다. (빈 응답의 원인 표시용)
+                if (string.IsNullOrEmpty(content) && string.IsNullOrEmpty(reasoning) && string.IsNullOrEmpty(choice.FinishReason))
                     return false;
 
-                delta = new ChatStreamDelta(d.Content, d.ReasoningContent);
+                delta = new ChatStreamDelta(content, reasoning, choice.FinishReason);
                 return true;
             }
             catch (JsonException)
@@ -185,9 +287,11 @@ namespace NvChat.Services
 
             var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
             if (response.IsSuccessStatusCode == false)
-                throw new NvidiaApiException(BuildErrorMessage((int)response.StatusCode, body));
+                throw new NvidiaApiException(BuildErrorMessage((int)response.StatusCode, body, response));
 
             var parsed = JsonSerializer.Deserialize<ChatCompletionResponse>(body, _jsonOptions);
+            PublishUsage(parsed?.Usage);
+
             var message = parsed?.Choices != null && parsed.Choices.Count > 0 ? parsed.Choices[0].Message : null;
             return message?.Content ?? string.Empty;
         }
@@ -208,7 +312,7 @@ namespace NvChat.Services
 
             var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
             if (response.IsSuccessStatusCode == false)
-                throw new NvidiaApiException(BuildErrorMessage((int)response.StatusCode, body));
+                throw new NvidiaApiException(BuildErrorMessage((int)response.StatusCode, body, response));
 
             var parsed = JsonSerializer.Deserialize<ModelsResponse>(body, _jsonOptions);
             var models = (parsed?.Data ?? new List<ModelEntry>())
@@ -282,7 +386,7 @@ namespace NvChat.Services
         /// <summary>
         /// 에러 응답 본문에서 사람이 읽을 메시지를 최대한 뽑아낸다.
         /// </summary>
-        private static string BuildErrorMessage(int statusCode, string body)
+        private static string BuildErrorMessage(int statusCode, string body, HttpResponseMessage response = null)
         {
             var detail = TryExtractErrorDetail(body);
 
@@ -292,13 +396,46 @@ namespace NvChat.Services
             if (detail.Length > 500)
                 detail = detail.Substring(0, 500) + "…";
 
-            var hint = statusCode == 401 || statusCode == 403
-                ? " (API 키가 올바른지 확인하세요)"
-                : statusCode == 429
-                    ? " (요청이 너무 많습니다. 잠시 후 다시 시도하세요)"
-                    : string.Empty;
+            string hint;
+
+            if (statusCode == 401 || statusCode == 403)
+            {
+                hint = " (API 키가 올바른지 확인하세요)";
+            }
+            else if (statusCode == 429)
+            {
+                var wait = TryReadRetryAfterSeconds(response);
+                hint = wait.HasValue
+                    ? $" (요청이 너무 많습니다. {wait.Value}초 후 다시 시도하세요)"
+                    : " (요청이 너무 많습니다. 잠시 후 다시 시도하세요)";
+            }
+            else
+            {
+                hint = string.Empty;
+            }
 
             return $"[{statusCode}] {detail}{hint}";
+        }
+
+        /// <summary>
+        /// 429 응답의 Retry-After 헤더에서 대기 시간(초)을 읽는다.
+        /// </summary>
+        private static int? TryReadRetryAfterSeconds(HttpResponseMessage response)
+        {
+            var retryAfter = response?.Headers?.RetryAfter;
+            if (retryAfter == null)
+                return null;
+
+            if (retryAfter.Delta.HasValue)
+                return (int)Math.Ceiling(retryAfter.Delta.Value.TotalSeconds);
+
+            if (retryAfter.Date.HasValue)
+            {
+                var seconds = (retryAfter.Date.Value - DateTimeOffset.Now).TotalSeconds;
+                return seconds > 0 ? (int)Math.Ceiling(seconds) : 0;
+            }
+
+            return null;
         }
 
         private static string TryExtractErrorDetail(string body)

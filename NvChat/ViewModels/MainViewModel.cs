@@ -14,6 +14,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Data;
 using System.Windows.Input;
+using System.Windows.Threading;
 
 namespace NvChat.ViewModels
 {
@@ -30,6 +31,7 @@ namespace NvChat.ViewModels
             _conversationStore = new ConversationStore();
             _settings = _settingsStore.Load();
             _client = new NvidiaClient(() => _settings);
+            _client.UsageReported += OnUsageReported;
 
             Attachments = new ObservableCollection<AttachmentViewModel>();
             Attachments.CollectionChanged += (_, __) =>
@@ -37,6 +39,8 @@ namespace NvChat.ViewModels
                 RaisePropertyChanged(nameof(HasAttachments));
                 _sendCommand?.RaiseCanExecuteChanged();
             };
+
+            StartUsageTimer();
         }
 
         #endregion
@@ -74,6 +78,116 @@ namespace NvChat.ViewModels
             "microsoft/phi-3.5-moe-instruct",
             "deepseek-ai/deepseek-r1"
         };
+
+        #endregion
+
+
+        #region Usage meter
+
+        // build.nvidia.com 은 잔여 할당량을 응답 헤더로도, 별도 API 로도 알려주지 않는다(실측 확인).
+        // 무료 크레딧은 '매일 리셋'이 아니라 가입 시 지급되어 누적 소모되는 구조이므로
+        // 게이지도 누적 요청 수를 기준으로 삼고, 분모(크레딧 수)는 사용자가 설정에서 넣는다.
+        private DispatcherTimer _usageTimer;
+
+        /// <summary>"오늘 12회 · 8.4k 토큰" 형태의 사용량 표시.</summary>
+        public string UsageTodayText
+        {
+            get
+            {
+                var stats = _settings.Usage;
+                var tokens = stats.TotalTokensToday;
+
+                var tokenText = tokens <= 0
+                    ? "0 토큰"
+                    : tokens < 10000
+                        ? $"{tokens:N0} 토큰"
+                        : $"{tokens / 1000.0:0.#}k 토큰";
+
+                return $"오늘 {stats.Requests:N0}회 · {tokenText}";
+            }
+        }
+
+        public string UsageTooltip
+        {
+            get
+            {
+                var stats = _settings.Usage;
+                var since = stats.CountingSince.HasValue
+                    ? stats.CountingSince.Value.ToString("yyyy-MM-dd HH:mm") + " 부터"
+                    : "설치 후";
+
+                return
+                    "이 앱에서 보낸 요청만 센 값입니다.\n" +
+                    "build.nvidia.com 은 남은 크레딧을 API 로 알려주지 않으므로\n" +
+                    "실제 잔여량은 build.nvidia.com 계정 페이지에서 확인하세요.\n\n" +
+                    $"누적 {stats.TotalRequests:N0}회 ({since})\n" +
+                    $"누적 토큰 입력 {stats.TotalPromptTokens:N0} · 출력 {stats.TotalCompletionTokens:N0}";
+            }
+        }
+
+        private void OnUsageReported(object sender, ChatUsage usage)
+        {
+            var dispatcher = Application.Current?.Dispatcher;
+
+            if (dispatcher != null && dispatcher.CheckAccess() == false)
+            {
+                dispatcher.BeginInvoke(new Action(() => OnUsageReported(sender, usage)));
+                return;
+            }
+
+            var stats = _settings.Usage;
+            stats.ResetTodayIfStale();
+
+            if (stats.CountingSince.HasValue == false)
+                stats.CountingSince = DateTime.Now;
+
+            stats.TotalRequests++;
+            stats.Requests++;
+
+            if (usage.HasTokens)
+            {
+                stats.TotalPromptTokens += usage.PromptTokens;
+                stats.TotalCompletionTokens += usage.CompletionTokens;
+                stats.PromptTokens += usage.PromptTokens;
+                stats.CompletionTokens += usage.CompletionTokens;
+            }
+
+            RaiseUsageChanged();
+            SaveSettingsQuietly();
+        }
+
+        /// <summary>
+        /// '오늘' 카운터의 날짜 경계를 감시한다. (누적은 건드리지 않는다)
+        /// </summary>
+        private void StartUsageTimer()
+        {
+            if (_usageTimer != null)
+                return;
+
+            _settings.Usage.ResetTodayIfStale();
+
+            _usageTimer = new DispatcherTimer(DispatcherPriority.Background)
+            {
+                Interval = TimeSpan.FromSeconds(30)
+            };
+            _usageTimer.Tick += (_, __) =>
+            {
+                if (_settings.Usage.ResetTodayIfStale())
+                {
+                    SaveSettingsQuietly();
+                    RaiseUsageChanged();
+                }
+            };
+            _usageTimer.Start();
+
+            RaiseUsageChanged();
+        }
+
+        private void RaiseUsageChanged()
+        {
+            RaisePropertyChanged(nameof(UsageTodayText));
+            RaisePropertyChanged(nameof(UsageTooltip));
+        }
 
         #endregion
 
@@ -468,6 +582,11 @@ namespace NvChat.ViewModels
             settings.WindowHeight = _settings.WindowHeight;
             settings.WindowMaximized = _settings.WindowMaximized;
 
+            // 사용량 집계는 설정 창이 열려 있는 동안에도 계속 쌓인다.
+            // 초기화를 요청한 경우에만 새 집계가 넘어오고, 그 외에는 살아 있는 값을 유지한다.
+            if (settings.Usage == null)
+                settings.Usage = _settings.Usage;
+
             _settings = settings;
             _settingsStore.Save(_settings);
 
@@ -475,6 +594,7 @@ namespace NvChat.ViewModels
             RaisePropertyChanged(nameof(SendOnEnter));
             RaisePropertyChanged(nameof(MinimizeToTrayOnClose));
             RaisePropertyChanged(nameof(Presets));
+            RaiseUsageChanged();
             RaiseCommandStates();
 
             if (HasStatusMessage && HasApiKey)
@@ -493,6 +613,21 @@ namespace NvChat.ViewModels
             _settings.WindowHeight = height;
             _settings.WindowMaximized = maximized;
             _settingsStore.Save(_settings);
+        }
+
+        /// <summary>
+        /// 사용자에게 알릴 필요 없는 부가 상태(사용량 집계 등)를 조용히 저장한다.
+        /// </summary>
+        private void SaveSettingsQuietly()
+        {
+            try
+            {
+                _settingsStore.Save(_settings);
+            }
+            catch
+            {
+                // 집계 저장 실패는 채팅 흐름에 영향을 주지 않는다.
+            }
         }
 
         #endregion
@@ -923,22 +1058,36 @@ namespace NvChat.ViewModels
             try
             {
                 var received = false;
+                string finishReason = null;
 
                 await foreach (var delta in _client.StreamChatAsync(modelId, apiMessages, conversation.Parameters, _streamCts.Token))
                 {
-                    received = true;
+                    if (string.IsNullOrEmpty(delta.FinishReason) == false)
+                        finishReason = delta.FinishReason;
 
                     if (string.IsNullOrEmpty(delta.Reasoning) == false)
+                    {
+                        received = true;
                         assistant.AppendReasoning(delta.Reasoning);
+                    }
 
                     if (string.IsNullOrEmpty(delta.Content) == false)
+                    {
+                        received = true;
                         assistant.AppendContent(delta.Content);
+                    }
                 }
 
                 ExtractInlineThinking(assistant);
 
+                // 내용이 하나도 오지 않은 경우. 자동 재전송은 하지 않는다(사용자의 무료 호출 한도를 말없이 소모하므로).
+                // 대신 사유를 밝히고, 메시지 아래 '다시 생성' 버튼으로 사용자가 직접 재시도하게 안내한다.
                 if (received == false && string.IsNullOrEmpty(assistant.Content))
-                    assistant.Content = "(빈 응답을 받았습니다)";
+                {
+                    assistant.HasError = true;
+                    assistant.Content = DescribeEmptyResponse(finishReason);
+                    StatusMessage = "모델이 내용을 만들지 않고 응답을 끝냈습니다. 응답 아래 '다시 생성'을 눌러 보세요.";
+                }
             }
             catch (OperationCanceledException)
             {
@@ -979,6 +1128,24 @@ namespace NvChat.ViewModels
             // 첫 응답이 정상 완료되면 모델로 제목 자동 생성(비차단).
             if (assistant.HasError == false)
                 _ = MaybeGenerateTitleAsync(conversation, modelId);
+        }
+
+        /// <summary>
+        /// 본문이 비어 있는 응답의 사유를 finish_reason 으로 설명한다.
+        /// </summary>
+        private static string DescribeEmptyResponse(string finishReason)
+        {
+            switch ((finishReason ?? string.Empty).ToLowerInvariant())
+            {
+                case "content_filter":
+                    return "⚠ 응답이 콘텐츠 필터에 의해 차단되어 본문이 비었습니다.";
+
+                case "length":
+                    return "⚠ 최대 출력 토큰에 먼저 도달해 본문이 비었습니다. 고급 설정에서 최대 토큰을 늘려 보세요.";
+
+                default:
+                    return "⚠ 모델이 본문 없이 응답을 끝냈습니다. 상류 서버의 일시적인 문제일 수 있으니 '다시 생성'을 눌러 보세요.";
+            }
         }
 
         private void OnStop()

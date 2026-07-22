@@ -651,4 +651,26 @@
         </Setter>
     </Style>
 
+    <!-- ===== 사용량 게이지용 얇은 ProgressBar ===== -->
+    <Style x:Key="MeterProgressStyle" TargetType="{x:Type ProgressBar}">
+        <Setter Property="Height" Value="5" />
+        <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+        <Setter Property="Background" Value="{StaticResource PanelBackgroundBrush}" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Focusable" Value="False" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type ProgressBar}">
+                    <Border Background="{TemplateBinding Background}" CornerRadius="3" ClipToBounds="True" SnapsToDevicePixels="True">
+                        <Grid>
+                            <Rectangle x:Name="PART_Track" />
+                            <Rectangle x:Name="PART_Indicator" HorizontalAlignment="Left"
+                                       Fill="{TemplateBinding Foreground}" RadiusX="3" RadiusY="3" />
+                        </Grid>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
 </ResourceDictionary>

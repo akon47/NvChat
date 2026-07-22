@@ -94,6 +94,9 @@ namespace NvChat.Services
             if (settings.Presets == null)
                 settings.Presets = AppSettings.DefaultPresets();
 
+            if (settings.Usage == null)
+                settings.Usage = new UsageStats();
+
             return settings;
         }
 
@@ -136,7 +139,8 @@ namespace NvChat.Services
                 WindowTop = settings.WindowTop,
                 WindowWidth = settings.WindowWidth,
                 WindowHeight = settings.WindowHeight,
-                WindowMaximized = settings.WindowMaximized
+                WindowMaximized = settings.WindowMaximized,
+                Usage = settings.Usage
             };
 
             try

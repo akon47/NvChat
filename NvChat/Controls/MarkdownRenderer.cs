@@ -12,18 +12,23 @@ using System.Windows.Media;
 namespace NvChat.Controls
 {
     /// <summary>
-    /// 경량 마크다운 → WPF 요소 렌더러(외부 라이브러리 없음).
-    /// 코드펜스(구문강조)/인라인코드/헤딩/목록(중첩·체크박스)/표/인용/구분선/굵게·기울임·취소선·링크 지원.
+    /// 경량 마크다운 → WPF FlowDocument 렌더러(외부 라이브러리 없음).
+    /// 읽기 전용 RichTextBox 에 넣어 문단/목록/표/인용까지 드래그 선택·복사가 가능하다.
+    /// 코드펜스(구문강조·복사 버튼)/인라인코드/헤딩/체크리스트/구분선/굵게·기울임·취소선·링크 지원.
     /// </summary>
     public static class MarkdownRenderer
     {
         #region Constants
 
         private static readonly FontFamily MonoFont = new FontFamily("Consolas, Cascadia Mono, Courier New");
-        private const int MaxInlineLength = 4000;   // 이보다 긴 줄은 인라인 파싱을 건너뛴다(백트래킹 방지).
-        private const int MaxHighlightLength = 20000;
+        private static readonly FontFamily BodyFont = new FontFamily("Segoe UI, Malgun Gothic");
+        private static readonly FontFamily IconFont = new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets");
 
-        // CommonMark 에 가깝게: 강조는 안쪽에 공백이 붙지 않아야 하고, 밑줄 변형은 단어 경계여야 한다.
+        private const int MaxInlineLength = 4000;
+        private const int MaxHighlightLength = 20000;
+        private const double BodyFontSize = 13;
+        private const double ListIndent = 18;
+
         private static readonly Regex InlineRegex = new Regex(
             @"(?<code>`+)(?<codebody>.+?)\k<code>" +
             @"|\[(?<ltext>[^\]]+)\]\((?<lurl>(?:[^()\s]|\([^)\s]*\))+)\)" +
@@ -40,12 +45,18 @@ namespace NvChat.Controls
 
         #region Public
 
-        public static FrameworkElement Render(string markdown)
+        public static FlowDocument RenderDocument(string markdown)
         {
-            var panel = new StackPanel();
+            var document = new FlowDocument
+            {
+                PagePadding = new Thickness(0),
+                FontFamily = BodyFont,
+                FontSize = BodyFontSize,
+                Foreground = GetBrush("ForegroundBrush", Color.FromRgb(0xF2, 0xF2, 0xF3))
+            };
 
             if (string.IsNullOrEmpty(markdown))
-                return panel;
+                return document;
 
             var lines = markdown.Replace("\r\n", "\n").Replace("\r", "\n").Split('\n');
             var index = 0;
@@ -68,7 +79,10 @@ namespace NvChat.Controls
                     if (index < lines.Length)
                         index++;
 
-                    panel.Children.Add(BuildCodeBlock(language, code.ToString().TrimEnd('\n')));
+                    document.Blocks.Add(new BlockUIContainer(BuildCodeBlock(language, code.ToString().TrimEnd('\n')))
+                    {
+                        Margin = new Thickness(0, 2, 0, 10)
+                    });
                     continue;
                 }
 
@@ -80,25 +94,24 @@ namespace NvChat.Controls
 
                 if (IsHorizontalRule(trimmed))
                 {
-                    panel.Children.Add(BuildRule());
+                    document.Blocks.Add(BuildRule());
                     index++;
                     continue;
                 }
 
                 if (TryHeading(trimmed, out var level, out var headingText))
                 {
-                    panel.Children.Add(BuildHeading(level, headingText));
+                    document.Blocks.Add(BuildHeading(level, headingText));
                     index++;
                     continue;
                 }
 
-                // 표: 현재 줄이 표 행이고 다음 줄이 구분선일 때.
                 if (trimmed.Contains('|') && index + 1 < lines.Length && IsTableSeparator(lines[index + 1].TrimStart()))
                 {
                     var table = ParseTable(lines, ref index);
                     if (table != null)
                     {
-                        panel.Children.Add(table);
+                        document.Blocks.Add(table);
                         continue;
                     }
                 }
@@ -111,7 +124,7 @@ namespace NvChat.Controls
                         quoteLines.Add(StripQuoteMarker(lines[index]));
                         index++;
                     }
-                    panel.Children.Add(BuildBlockquote(quoteLines));
+                    document.Blocks.Add(BuildBlockquote(quoteLines));
                     continue;
                 }
 
@@ -123,7 +136,10 @@ namespace NvChat.Controls
                         items.Add(new ListItem { Indent = indent, Ordered = ordered, Marker = marker, Task = task, Text = text });
                         index++;
                     }
-                    panel.Children.Add(BuildList(items));
+
+                    foreach (var block in BuildList(items))
+                        document.Blocks.Add(block);
+
                     continue;
                 }
 
@@ -146,17 +162,18 @@ namespace NvChat.Controls
                     paragraph.Add(line);
                     index++;
                 }
-                panel.Children.Add(BuildParagraph(paragraph));
+                document.Blocks.Add(BuildParagraph(paragraph));
             }
 
-            // 마지막 블록의 하단 마진을 없애 말풍선 하단에 여백이 남지 않게 한다.
-            if (panel.Children.Count > 0 && panel.Children[panel.Children.Count - 1] is FrameworkElement lastBlock)
+            // 마지막 블록의 하단 마진 제거(말풍선 하단 여백 방지)
+            var last = document.Blocks.LastBlock;
+            if (last != null)
             {
-                var m = lastBlock.Margin;
-                lastBlock.Margin = new Thickness(m.Left, m.Top, m.Right, 0);
+                var m = last.Margin;
+                last.Margin = new Thickness(m.Left, m.Top, m.Right, 0);
             }
 
-            return panel;
+            return document;
         }
 
         #endregion
@@ -164,178 +181,157 @@ namespace NvChat.Controls
 
         #region Block builders
 
-        private static UIElement BuildParagraph(IReadOnlyList<string> lines)
+        private static Block BuildParagraph(IReadOnlyList<string> lines)
         {
-            var textBlock = CreateBodyTextBlock();
-            AppendLinesWithBreaks(textBlock, lines);
-            textBlock.Margin = new Thickness(0, 0, 0, 8);
-            return textBlock;
+            var paragraph = new Paragraph { Margin = new Thickness(0, 0, 0, 8) };
+            AppendLinesWithBreaks(paragraph, lines);
+            return paragraph;
         }
 
-        private static UIElement BuildHeading(int level, string text)
+        private static Block BuildHeading(int level, string text)
         {
             double size = level switch
             {
-                1 => 22,
-                2 => 19,
-                3 => 16.5,
-                4 => 15,
-                _ => 14
+                1 => 21,
+                2 => 18,
+                3 => 16,
+                4 => 14.5,
+                _ => 13.5
             };
 
-            var textBlock = CreateBodyTextBlock();
-            textBlock.FontSize = size;
-            textBlock.FontWeight = FontWeights.SemiBold;
-            textBlock.Margin = new Thickness(0, level <= 2 ? 10 : 6, 0, 4);
-            AppendInlines(textBlock, text);
-            return textBlock;
+            var paragraph = new Paragraph
+            {
+                FontSize = size,
+                FontWeight = FontWeights.SemiBold,
+                Margin = new Thickness(0, level <= 2 ? 10 : 6, 0, 4)
+            };
+
+            AppendInlines(paragraph, text);
+            return paragraph;
         }
 
-        private static UIElement BuildList(IReadOnlyList<ListItem> items)
+        private static IEnumerable<Block> BuildList(IReadOnlyList<ListItem> items)
         {
-            var panel = new StackPanel { Margin = new Thickness(2, 0, 0, 8) };
-
-            // 순서 목록 시작 번호는 첫 항목의 마커에서 가져온다.
             var number = 1;
             var firstOrdered = items.FirstOrDefault(i => i.Ordered);
             if (firstOrdered.Ordered && int.TryParse(firstOrdered.Marker.TrimEnd('.'), out var startNo))
                 number = startNo;
 
-            foreach (var item in items)
+            var accent = GetBrush("AccentBrush", Color.FromRgb(0x76, 0xB9, 0x00));
+            var muted = GetBrush("SecondaryForegroundBrush", Color.FromRgb(0x9E, 0xA2, 0xAE));
+            var blocks = new List<Block>();
+
+            for (var i = 0; i < items.Count; i++)
             {
+                var item = items[i];
                 var indentLevel = Math.Min(item.Indent / 2, 6);
 
-                var grid = new Grid { Margin = new Thickness(indentLevel * 18, 1, 0, 1) };
-                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(24) });
-                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                var paragraph = new Paragraph
+                {
+                    Margin = new Thickness(indentLevel * ListIndent + ListIndent, 1, 0, i == items.Count - 1 ? 8 : 1),
+                    TextIndent = -ListIndent
+                };
 
-                FrameworkElement bullet;
                 if (item.Task.HasValue)
                 {
-                    bullet = new TextBlock
+                    paragraph.Inlines.Add(new Run(item.Task.Value ? "  " : "  ")
                     {
-                        Text = item.Task.Value ? "" : "",
-                        FontFamily = new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"),
+                        FontFamily = IconFont,
                         FontSize = 12,
-                        Foreground = item.Task.Value ? GetBrush("AccentBrush", Color.FromRgb(0x76, 0xB9, 0x00)) : GetBrush("SecondaryForegroundBrush", Color.FromRgb(0x9E, 0xA2, 0xAE)),
-                        HorizontalAlignment = HorizontalAlignment.Right,
-                        Margin = new Thickness(0, 1, 8, 0)
-                    };
+                        Foreground = item.Task.Value ? accent : muted
+                    });
                 }
                 else
                 {
-                    var bulletBlock = CreateBodyTextBlock();
-                    bulletBlock.Text = item.Ordered ? $"{number++}." : "•";
-                    bulletBlock.Foreground = GetBrush("AccentBrush", Color.FromRgb(0x76, 0xB9, 0x00));
-                    bulletBlock.HorizontalAlignment = HorizontalAlignment.Right;
-                    bulletBlock.Margin = new Thickness(0, 0, 8, 0);
-                    bullet = bulletBlock;
+                    var marker = item.Ordered ? $"{number++}." : "•";
+                    paragraph.Inlines.Add(new Run(marker + "  ") { Foreground = accent });
                 }
-                Grid.SetColumn(bullet, 0);
 
-                var content = CreateBodyTextBlock();
-                AppendInlines(content, item.Text);
-                Grid.SetColumn(content, 1);
-
-                grid.Children.Add(bullet);
-                grid.Children.Add(content);
-                panel.Children.Add(grid);
+                AppendInlines(paragraph, item.Text);
+                blocks.Add(paragraph);
             }
 
-            return panel;
+            return blocks;
         }
 
-        private static UIElement BuildBlockquote(IReadOnlyList<string> lines)
+        private static Block BuildBlockquote(IReadOnlyList<string> lines)
         {
-            var textBlock = CreateBodyTextBlock();
-            textBlock.Foreground = GetBrush("SecondaryForegroundBrush", Color.FromRgb(0x9E, 0xA2, 0xAE));
-            AppendLinesWithBreaks(textBlock, lines);
-
-            return new Border
+            var paragraph = new Paragraph
             {
+                Foreground = GetBrush("SecondaryForegroundBrush", Color.FromRgb(0x9E, 0xA2, 0xAE)),
+                Background = GetBrush("InlineCodeBackgroundBrush", Color.FromRgb(0x2A, 0x2A, 0x2B)),
                 BorderBrush = GetBrush("AccentBrush", Color.FromRgb(0x76, 0xB9, 0x00)),
                 BorderThickness = new Thickness(3, 0, 0, 0),
-                Background = GetBrush("InlineCodeBackgroundBrush", Color.FromRgb(0x2A, 0x2A, 0x2B)),
                 Padding = new Thickness(12, 8, 12, 8),
-                Margin = new Thickness(0, 2, 0, 8),
-                Child = textBlock
+                Margin = new Thickness(0, 2, 0, 8)
             };
+
+            AppendLinesWithBreaks(paragraph, lines);
+            return paragraph;
         }
 
-        private static UIElement BuildRule()
+        private static Block BuildRule()
         {
-            return new Border
+            return new Paragraph
             {
-                Height = 1,
-                Background = GetBrush("BorderBrush", Color.FromRgb(0x3A, 0x3A, 0x3C)),
-                Margin = new Thickness(0, 8, 0, 8)
+                BorderBrush = GetBrush("BorderBrush", Color.FromRgb(0x3A, 0x3A, 0x3C)),
+                BorderThickness = new Thickness(0, 0, 0, 1),
+                Margin = new Thickness(0, 8, 0, 8),
+                FontSize = 1
             };
         }
 
-        private static UIElement BuildTable(IReadOnlyList<string> headers, IReadOnlyList<TextAlignment> alignments, IReadOnlyList<IReadOnlyList<string>> rows)
+        private static Table BuildTable(IReadOnlyList<string> headers, IReadOnlyList<TextAlignment> alignments, IReadOnlyList<IReadOnlyList<string>> rows)
         {
-            var grid = new Grid();
-            var columns = headers.Count;
-            for (var c = 0; c < columns; c++)
-                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-
-            grid.RowDefinitions.Add(new RowDefinition());
-            for (var r = 0; r < rows.Count; r++)
-                grid.RowDefinitions.Add(new RowDefinition());
-
             var border = GetBrush("BorderBrush", Color.FromRgb(0x3A, 0x3A, 0x3C));
             var headerBg = GetBrush("CodeHeaderBackgroundBrush", Color.FromRgb(0x22, 0x22, 0x24));
 
-            Border MakeCell(string text, int col, int row, bool header)
-            {
-                var tb = CreateBodyTextBlock();
-                tb.TextAlignment = col < alignments.Count ? alignments[col] : TextAlignment.Left;
-                if (header)
-                    tb.FontWeight = FontWeights.SemiBold;
-                AppendInlines(tb, text);
+            var table = new Table { CellSpacing = 0, Margin = new Thickness(0, 2, 0, 10) };
+            for (var c = 0; c < headers.Count; c++)
+                table.Columns.Add(new TableColumn { Width = GridLength.Auto });
 
-                var cell = new Border
+            var group = new TableRowGroup();
+            table.RowGroups.Add(group);
+
+            TableCell MakeCell(string text, int col, bool header)
+            {
+                var paragraph = new Paragraph
+                {
+                    Margin = new Thickness(0),
+                    TextAlignment = col < alignments.Count ? alignments[col] : TextAlignment.Left
+                };
+
+                if (header)
+                    paragraph.FontWeight = FontWeights.SemiBold;
+
+                AppendInlines(paragraph, text);
+
+                return new TableCell(paragraph)
                 {
                     BorderBrush = border,
                     BorderThickness = new Thickness(0.5),
                     Background = header ? headerBg : Brushes.Transparent,
-                    Padding = new Thickness(10, 6, 10, 6),
-                    Child = tb
+                    Padding = new Thickness(10, 6, 10, 6)
                 };
-                Grid.SetColumn(cell, col);
-                Grid.SetRow(cell, row);
-                return cell;
             }
 
-            for (var c = 0; c < columns; c++)
-                grid.Children.Add(MakeCell(c < headers.Count ? headers[c] : string.Empty, c, 0, true));
+            var headerRow = new TableRow();
+            for (var c = 0; c < headers.Count; c++)
+                headerRow.Cells.Add(MakeCell(headers[c], c, true));
+            group.Rows.Add(headerRow);
 
-            for (var r = 0; r < rows.Count; r++)
+            foreach (var row in rows)
             {
-                for (var c = 0; c < columns; c++)
-                {
-                    var cellText = c < rows[r].Count ? rows[r][c] : string.Empty;
-                    grid.Children.Add(MakeCell(cellText, c, r + 1, false));
-                }
+                var tableRow = new TableRow();
+                for (var c = 0; c < headers.Count; c++)
+                    tableRow.Cells.Add(MakeCell(c < row.Count ? row[c] : string.Empty, c, false));
+                group.Rows.Add(tableRow);
             }
 
-            return new Border
-            {
-                BorderBrush = border,
-                BorderThickness = new Thickness(0.5),
-                CornerRadius = new CornerRadius(6),
-                Margin = new Thickness(0, 2, 0, 10),
-                ClipToBounds = true,
-                Child = new ScrollViewer
-                {
-                    HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
-                    VerticalScrollBarVisibility = ScrollBarVisibility.Disabled,
-                    Content = grid
-                }
-            };
+            return table;
         }
 
-        private static UIElement BuildCodeBlock(string language, string code)
+        private static FrameworkElement BuildCodeBlock(string language, string code)
         {
             code = code ?? string.Empty;
 
@@ -344,8 +340,7 @@ namespace NvChat.Controls
                 Background = GetBrush("CodeBlockBackgroundBrush", Color.FromRgb(0x18, 0x18, 0x19)),
                 BorderBrush = GetBrush("BorderBrush", Color.FromRgb(0x3A, 0x3A, 0x3C)),
                 BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(8),
-                Margin = new Thickness(0, 2, 0, 10)
+                CornerRadius = new CornerRadius(8)
             };
 
             var root = new Grid();
@@ -429,13 +424,12 @@ namespace NvChat.Controls
 
             var lines = code.Replace("\r\n", "\n").Replace("\r", "\n").Split('\n');
             var maxLen = lines.Length == 0 ? 0 : lines.Max(l => l.Length);
-            document.PageWidth = Math.Max(80, maxLen * 7.4 + 28); // 줄바꿈 방지용 폭(가로 스크롤 유도)
+            document.PageWidth = Math.Max(80, maxLen * 7.4 + 28);
 
             var paragraph = new Paragraph { Margin = new Thickness(0), LineHeight = 18 };
 
             if (code.Length > MaxHighlightLength)
             {
-                // 너무 크면 강조 없이(성능).
                 for (var i = 0; i < lines.Length; i++)
                 {
                     paragraph.Inlines.Add(new Run(lines[i]));
@@ -458,6 +452,10 @@ namespace NvChat.Controls
 
             document.Blocks.Add(paragraph);
             richTextBox.Document = document;
+
+            // 코드 블록이 휠을 삼켜 바깥 대화 목록이 멈추지 않도록, 한계에 닿으면 부모로 넘긴다.
+            Behaviors.NestedScroll.EnableWheelBubbling(richTextBox);
+
             return richTextBox;
         }
 
@@ -466,20 +464,20 @@ namespace NvChat.Controls
 
         #region Inline building
 
-        private static void AppendLinesWithBreaks(TextBlock textBlock, IReadOnlyList<string> lines)
+        private static void AppendLinesWithBreaks(Paragraph paragraph, IReadOnlyList<string> lines)
         {
             for (var i = 0; i < lines.Count; i++)
             {
-                AppendInlines(textBlock, lines[i].TrimEnd());
+                AppendInlines(paragraph, lines[i].TrimEnd());
                 if (i < lines.Count - 1)
-                    textBlock.Inlines.Add(new LineBreak());
+                    paragraph.Inlines.Add(new LineBreak());
             }
         }
 
-        private static void AppendInlines(TextBlock textBlock, string text)
+        private static void AppendInlines(Paragraph paragraph, string text)
         {
             foreach (var inline in ParseInlines(text ?? string.Empty))
-                textBlock.Inlines.Add(inline);
+                paragraph.Inlines.Add(inline);
         }
 
         private static IEnumerable<Inline> ParseInlines(string text)
@@ -492,7 +490,6 @@ namespace NvChat.Controls
                 return result;
             }
 
-            // 지나치게 긴 줄은 인라인 파싱을 건너뛴다(정규식 백트래킹 방지).
             if (text.Length > MaxInlineLength)
             {
                 result.Add(new Run(text));
@@ -532,11 +529,10 @@ namespace NvChat.Controls
                 }
                 else if (match.Groups["strike"].Success)
                 {
-                    var span = new Span(BuildSpanContent(match.Groups["strike"].Value))
+                    result.Add(new Span(BuildSpanContent(match.Groups["strike"].Value))
                     {
                         TextDecorations = TextDecorations.Strikethrough
-                    };
-                    result.Add(span);
+                    });
                 }
                 else if (match.Groups["italic"].Success || match.Groups["italic2"].Success)
                 {
@@ -580,10 +576,7 @@ namespace NvChat.Controls
             var uri = TryCreateUri(url);
 
             if (uri == null)
-            {
-                // 주소를 만들 수 없으면 죽은 링크 대신 강조된 텍스트로.
                 return new Run(text) { Foreground = GetBrush("AccentBrush", Color.FromRgb(0x76, 0xB9, 0x00)) };
-            }
 
             var link = new Hyperlink(new Run(text))
             {
@@ -617,7 +610,7 @@ namespace NvChat.Controls
             public int Indent;
             public bool Ordered;
             public string Marker;
-            public bool? Task;   // null=목록, true=체크됨, false=체크안됨
+            public bool? Task;
             public string Text;
         }
 
@@ -634,7 +627,7 @@ namespace NvChat.Controls
                 return false;
 
             var info = trimmed.TrimStart(fenceChar).Trim();
-            language = info.Split(new[] { ' ', '\t' }, 2)[0];   // 첫 토큰만 언어로.
+            language = info.Split(new[] { ' ', '\t' }, 2)[0];
             return true;
         }
 
@@ -716,7 +709,6 @@ namespace NvChat.Controls
                 }
             }
 
-            // 체크박스 목록: [ ] / [x]
             if (text.Length >= 3 && text[0] == '[' && text[2] == ']')
             {
                 var mark = text[1];
@@ -732,9 +724,6 @@ namespace NvChat.Controls
 
         private static bool IsTableSeparator(string trimmed)
         {
-            if (trimmed.Contains('|') == false && trimmed.Contains('-') == false)
-                return false;
-
             var body = trimmed.Trim();
             if (body.Contains('-') == false)
                 return false;
@@ -747,7 +736,7 @@ namespace NvChat.Controls
             return true;
         }
 
-        private static UIElement ParseTable(string[] lines, ref int index)
+        private static Table ParseTable(string[] lines, ref int index)
         {
             var headerCells = SplitTableRow(lines[index]);
             var separatorCells = SplitTableRow(lines[index + 1]);
@@ -771,7 +760,10 @@ namespace NvChat.Controls
                 if (t.Length == 0 || t.Contains('|') == false)
                     break;
 
-                rows.Add(SplitTableRow(lines[index]));
+                // 모델이 행 사이마다 구분선(|---|---|)을 넣는 경우가 있어 데이터 행으로 세지 않는다.
+                if (IsTableSeparator(t) == false)
+                    rows.Add(SplitTableRow(lines[index]));
+
                 index++;
             }
 
@@ -830,7 +822,6 @@ namespace NvChat.Controls
             if (Uri.TryCreate(url, UriKind.Absolute, out var absolute))
                 return absolute;
 
-            // 스킴이 없으면 https 를 붙여 시도(bare 도메인 지원).
             if (url.Contains("://") == false && Uri.TryCreate("https://" + url, UriKind.Absolute, out var https))
                 return https;
 
@@ -841,15 +832,6 @@ namespace NvChat.Controls
 
 
         #region Element helpers
-
-        private static TextBlock CreateBodyTextBlock()
-        {
-            return new TextBlock
-            {
-                TextWrapping = TextWrapping.Wrap,
-                Foreground = GetBrush("ForegroundBrush", Color.FromRgb(0xF2, 0xF2, 0xF3))
-            };
-        }
 
         private static Brush GetBrush(string key, Color fallback)
         {

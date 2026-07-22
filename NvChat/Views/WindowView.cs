@@ -115,6 +115,21 @@ namespace NvChat.Views
         }
 
 
+        public static readonly DependencyProperty ShowTitleTextProperty = DependencyProperty.Register
+        (
+            nameof(ShowTitleText), typeof(bool), typeof(WindowView), new FrameworkPropertyMetadata(true)
+        );
+
+        /// <summary>
+        /// 타이틀바에 창 제목 텍스트를 표시할지 여부. (브랜드 아이콘만으로 충분한 창은 false)
+        /// </summary>
+        public bool ShowTitleText
+        {
+            get => (bool)GetValue(ShowTitleTextProperty);
+            set => SetValue(ShowTitleTextProperty, value);
+        }
+
+
         public static readonly DependencyProperty ShowMinimizeButtonProperty = DependencyProperty.Register
         (
             nameof(ShowMinimizeButton), typeof(bool), typeof(WindowView), new FrameworkPropertyMetadata(true)
@@ -159,6 +174,9 @@ namespace NvChat.Views
         {
             base.OnSourceInitialized(e);
             TryEnableRoundedCorners();
+
+            if (PresentationSource.FromVisual(this) is HwndSource source)
+                source.AddHook(OnWindowMessage);
         }
 
         protected override void OnClosing(CancelEventArgs e)
@@ -247,6 +265,90 @@ namespace NvChat.Views
 
         [DllImport("dwmapi.dll")]
         private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int value, int size);
+
+        #endregion
+
+
+        #region Helpers - Maximize bounds
+
+        /// <summary>
+        /// WindowStyle=None 창은 최대화 시 모니터 전체(작업 표시줄 아래까지)로 커져 하단이 잘린다.
+        /// WM_GETMINMAXINFO 에서 현재 모니터의 작업 영역(rcWork)으로 최대 크기/위치를 직접 지정한다.
+        /// </summary>
+        private IntPtr OnWindowMessage(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+        {
+            const int WM_GETMINMAXINFO = 0x0024;
+
+            if (msg != WM_GETMINMAXINFO)
+                return IntPtr.Zero;
+
+            const int MONITOR_DEFAULTTONEAREST = 0x00000002;
+
+            var monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+            if (monitor == IntPtr.Zero)
+                return IntPtr.Zero;
+
+            var monitorInfo = new MONITORINFO { cbSize = Marshal.SizeOf<MONITORINFO>() };
+            if (GetMonitorInfo(monitor, ref monitorInfo) == false)
+                return IntPtr.Zero;
+
+            var work = monitorInfo.rcWork;
+            var screen = monitorInfo.rcMonitor;
+
+            var info = Marshal.PtrToStructure<MINMAXINFO>(lParam);
+            info.ptMaxPosition.X = work.Left - screen.Left;
+            info.ptMaxPosition.Y = work.Top - screen.Top;
+            info.ptMaxSize.X = work.Right - work.Left;
+            info.ptMaxSize.Y = work.Bottom - work.Top;
+            info.ptMaxTrackSize.X = info.ptMaxSize.X;
+            info.ptMaxTrackSize.Y = info.ptMaxSize.Y;
+            Marshal.StructureToPtr(info, lParam, true);
+
+            handled = true;
+            return IntPtr.Zero;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct POINT
+        {
+            public int X;
+            public int Y;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct RECT
+        {
+            public int Left;
+            public int Top;
+            public int Right;
+            public int Bottom;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct MINMAXINFO
+        {
+            public POINT ptReserved;
+            public POINT ptMaxSize;
+            public POINT ptMaxPosition;
+            public POINT ptMinTrackSize;
+            public POINT ptMaxTrackSize;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct MONITORINFO
+        {
+            public int cbSize;
+            public RECT rcMonitor;
+            public RECT rcWork;
+            public int dwFlags;
+        }
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr MonitorFromWindow(IntPtr hwnd, int flags);
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool GetMonitorInfo(IntPtr hMonitor, ref MONITORINFO info);
 
         #endregion
     }
