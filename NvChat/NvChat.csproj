@@ -1,0 +1,46 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <RootNamespace>NvChat</RootNamespace>
+    <AssemblyName>NvChat</AssemblyName>
+    <UseWPF>true</UseWPF>
+    <Nullable>disable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <Deterministic>true</Deterministic>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AssemblyTitle>NvChat</AssemblyTitle>
+    <Product>NvChat</Product>
+    <Company>NvChat</Company>
+    <Version>1.0.0</Version>
+    <NeutralLanguage>ko-KR</NeutralLanguage>
+  </PropertyGroup>
+
+  <!-- RID 는 restore 를 위해 항상 지정하되, Debug 내부 루프는 프레임워크 의존(가볍게)으로 둔다. -->
+  <PropertyGroup>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <DebugType>embedded</DebugType>
+    <!-- 단일 파일에서 System.Text.Json 의 리플렉션 직렬화를 안전하게 유지 -->
+    <PublishTrimmed>false</PublishTrimmed>
+  </PropertyGroup>
+
+  <!-- 단일 self-contained exe 배포 설정(Release 전용).
+       `dotnet publish -c Release` 한 번이면
+       bin\Release\net8.0-windows\win-x64\publish\NvChat.exe 파일 하나만으로
+       실행 가능한 결과물이 나온다. (.NET 런타임 미설치 PC에서도 실행) -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- API 키를 로컬에 저장할 때 Windows DPAPI(CurrentUser)로 암호화하기 위한 유일한 외부 의존성.
+         순수 관리형 어셈블리라 단일 exe에 문제없이 포함된다. -->
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
+  </ItemGroup>
+
+</Project>

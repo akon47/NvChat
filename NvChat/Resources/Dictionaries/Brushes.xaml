@@ -1,0 +1,51 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:popt="http://schemas.microsoft.com/winfx/2006/xaml/presentation/options"
+    >
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="pack://application:,,,/NvChat;component/Resources/Dictionaries/Colors.xaml" />
+    </ResourceDictionary.MergedDictionaries>
+
+    <SolidColorBrush x:Key="WindowBackgroundBrush" popt:Freeze="True" Color="{StaticResource WindowBackgroundColor}" />
+    <SolidColorBrush x:Key="TitleBarBackgroundBrush" popt:Freeze="True" Color="{StaticResource TitleBarBackgroundColor}" />
+    <SolidColorBrush x:Key="PanelBackgroundBrush" popt:Freeze="True" Color="{StaticResource PanelBackgroundColor}" />
+    <SolidColorBrush x:Key="CardBackgroundBrush" popt:Freeze="True" Color="{StaticResource CardBackgroundColor}" />
+    <SolidColorBrush x:Key="ControlBackgroundBrush" popt:Freeze="True" Color="{StaticResource ControlBackgroundColor}" />
+    <SolidColorBrush x:Key="ControlHoverBackgroundBrush" popt:Freeze="True" Color="{StaticResource ControlHoverBackgroundColor}" />
+
+    <SolidColorBrush x:Key="ForegroundBrush" popt:Freeze="True" Color="{StaticResource ForegroundColor}" />
+    <SolidColorBrush x:Key="SecondaryForegroundBrush" popt:Freeze="True" Color="{StaticResource SecondaryForegroundColor}" />
+    <SolidColorBrush x:Key="MutedForegroundBrush" popt:Freeze="True" Color="{StaticResource MutedForegroundColor}" />
+
+    <SolidColorBrush x:Key="BorderBrush" popt:Freeze="True" Color="{StaticResource BorderColor}" />
+    <SolidColorBrush x:Key="BorderStrongBrush" popt:Freeze="True" Color="{StaticResource BorderStrongColor}" />
+
+    <SolidColorBrush x:Key="AccentBrush" popt:Freeze="True" Color="{StaticResource AccentColor}" />
+    <SolidColorBrush x:Key="AccentHoverBrush" popt:Freeze="True" Color="{StaticResource AccentHoverColor}" />
+    <SolidColorBrush x:Key="AccentPressedBrush" popt:Freeze="True" Color="{StaticResource AccentPressedColor}" />
+    <SolidColorBrush x:Key="AccentForegroundBrush" popt:Freeze="True" Color="{StaticResource AccentForegroundColor}" />
+    <SolidColorBrush x:Key="AccentSoftBrush" popt:Freeze="True" Opacity="0.15" Color="{StaticResource AccentColor}" />
+
+    <SolidColorBrush x:Key="UserBubbleBackgroundBrush" popt:Freeze="True" Color="{StaticResource UserBubbleBackgroundColor}" />
+    <SolidColorBrush x:Key="UserBubbleBorderBrush" popt:Freeze="True" Color="{StaticResource UserBubbleBorderColor}" />
+    <SolidColorBrush x:Key="AssistantBubbleBackgroundBrush" popt:Freeze="True" Color="{StaticResource AssistantBubbleBackgroundColor}" />
+    <SolidColorBrush x:Key="AssistantBubbleBorderBrush" popt:Freeze="True" Color="{StaticResource AssistantBubbleBorderColor}" />
+
+    <SolidColorBrush x:Key="CodeBlockBackgroundBrush" popt:Freeze="True" Color="{StaticResource CodeBlockBackgroundColor}" />
+    <SolidColorBrush x:Key="CodeHeaderBackgroundBrush" popt:Freeze="True" Color="{StaticResource CodeHeaderBackgroundColor}" />
+    <SolidColorBrush x:Key="CodeForegroundBrush" popt:Freeze="True" Color="{StaticResource CodeForegroundColor}" />
+    <SolidColorBrush x:Key="InlineCodeBackgroundBrush" popt:Freeze="True" Color="{StaticResource InlineCodeBackgroundColor}" />
+    <SolidColorBrush x:Key="InlineCodeForegroundBrush" popt:Freeze="True" Color="{StaticResource InlineCodeForegroundColor}" />
+
+    <SolidColorBrush x:Key="ErrorBrush" popt:Freeze="True" Color="{StaticResource ErrorColor}" />
+    <SolidColorBrush x:Key="SuccessBrush" popt:Freeze="True" Color="{StaticResource SuccessColor}" />
+    <SolidColorBrush x:Key="WarnBrush" popt:Freeze="True" Color="{StaticResource WarnColor}" />
+
+    <SolidColorBrush x:Key="ScrollThumbBrush" popt:Freeze="True" Color="{StaticResource ScrollThumbColor}" />
+    <SolidColorBrush x:Key="ScrollThumbHoverBrush" popt:Freeze="True" Color="{StaticResource ScrollThumbHoverColor}" />
+    <SolidColorBrush x:Key="OverlayHoverBrush" popt:Freeze="True" Opacity="0.08" Color="{StaticResource WhiteColor}" />
+    <SolidColorBrush x:Key="OverlayPressedBrush" popt:Freeze="True" Opacity="0.14" Color="{StaticResource WhiteColor}" />
+    <SolidColorBrush x:Key="CloseHoverBrush" popt:Freeze="True" Color="{StaticResource CloseHoverColor}" />
+
+</ResourceDictionary>

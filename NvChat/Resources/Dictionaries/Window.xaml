@@ -1,0 +1,169 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:views="clr-namespace:NvChat.Views"
+    >
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="pack://application:,,,/NvChat;component/Resources/Dictionaries/Brushes.xaml" />
+        <ResourceDictionary Source="pack://application:,,,/NvChat;component/Resources/Dictionaries/Converters.xaml" />
+    </ResourceDictionary.MergedDictionaries>
+
+    <!-- 캡션(창) 버튼 -->
+    <Style x:Key="CaptionButtonStyle" TargetType="{x:Type Button}">
+        <Setter Property="Foreground" Value="{StaticResource SecondaryForegroundBrush}" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Width" Value="46" />
+        <Setter Property="Height" Value="34" />
+        <Setter Property="FontFamily" Value="Segoe Fluent Icons, Segoe MDL2 Assets" />
+        <Setter Property="FontSize" Value="10" />
+        <Setter Property="Cursor" Value="Arrow" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type Button}">
+                    <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="6">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource OverlayHoverBrush}" />
+                            <Setter Property="Foreground" Value="{StaticResource ForegroundBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource OverlayPressedBrush}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="CaptionCloseButtonStyle" TargetType="{x:Type Button}">
+        <Setter Property="Foreground" Value="{StaticResource SecondaryForegroundBrush}" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Width" Value="46" />
+        <Setter Property="Height" Value="34" />
+        <Setter Property="FontFamily" Value="Segoe Fluent Icons, Segoe MDL2 Assets" />
+        <Setter Property="FontSize" Value="10" />
+        <Setter Property="Cursor" Value="Arrow" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type Button}">
+                    <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="6">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource CloseHoverBrush}" />
+                            <Setter Property="Foreground" Value="White" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- 커스텀 보더리스 창 스타일 -->
+    <Style x:Key="NvWindowStyle" TargetType="{x:Type views:WindowView}">
+        <Setter Property="WindowStyle" Value="None" />
+        <Setter Property="AllowsTransparency" Value="False" />
+        <Setter Property="Background" Value="{StaticResource WindowBackgroundBrush}" />
+        <Setter Property="Foreground" Value="{StaticResource ForegroundBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}" />
+        <Setter Property="FontFamily" Value="Segoe UI, Malgun Gothic" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="TextOptions.TextFormattingMode" Value="Display" />
+        <Setter Property="TextOptions.TextRenderingMode" Value="ClearType" />
+        <Setter Property="WindowChrome.WindowChrome">
+            <Setter.Value>
+                <WindowChrome CaptionHeight="40"
+                              ResizeBorderThickness="6"
+                              CornerRadius="0"
+                              GlassFrameThickness="0"
+                              UseAeroCaptionButtons="False"
+                              NonClientFrameEdges="None" />
+            </Setter.Value>
+        </Setter>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type views:WindowView}">
+                    <Border x:Name="RootBorder"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="1">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="40" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+
+                            <!-- 타이틀바 -->
+                            <Grid Grid.Row="0" Background="{StaticResource TitleBarBackgroundBrush}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <!-- 브랜드 + 제목 -->
+                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0">
+                                    <Border Width="22" Height="22" CornerRadius="6" Background="{StaticResource AccentBrush}">
+                                        <TextBlock Text="N"
+                                                   Foreground="{StaticResource AccentForegroundBrush}"
+                                                   FontWeight="Bold"
+                                                   FontSize="13"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center" />
+                                    </Border>
+                                    <TextBlock Text="{TemplateBinding Title}"
+                                               Foreground="{StaticResource SecondaryForegroundBrush}"
+                                               FontSize="12.5"
+                                               VerticalAlignment="Center"
+                                               Margin="10,0,0,0" />
+                                </StackPanel>
+
+                                <!-- 타이틀바 커스텀 콘텐츠 -->
+                                <ContentPresenter Grid.Column="1"
+                                                  Content="{TemplateBinding TitleBarContent}"
+                                                  VerticalAlignment="Center"
+                                                  WindowChrome.IsHitTestVisibleInChrome="True" />
+
+                                <!-- 창 버튼 -->
+                                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center"
+                                            WindowChrome.IsHitTestVisibleInChrome="True">
+                                    <Button x:Name="MinimizeButton"
+                                            Style="{StaticResource CaptionButtonStyle}"
+                                            Command="{TemplateBinding MinimizeCommand}"
+                                            Content="&#xE921;"
+                                            Visibility="{Binding ShowMinimizeButton, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource BoolToVis}}" />
+                                    <Button x:Name="MaximizeButton"
+                                            Style="{StaticResource CaptionButtonStyle}"
+                                            Command="{TemplateBinding MaximizeCommand}"
+                                            Content="&#xE922;"
+                                            Visibility="{Binding ShowMaximizeButton, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource BoolToVis}}" />
+                                    <Button x:Name="CloseButton"
+                                            Style="{StaticResource CaptionCloseButtonStyle}"
+                                            Command="{TemplateBinding CloseCommand}"
+                                            Content="&#xE8BB;"
+                                            Margin="0,0,4,0" />
+                                </StackPanel>
+                            </Grid>
+
+                            <!-- 본문 -->
+                            <AdornerDecorator Grid.Row="1">
+                                <ContentPresenter />
+                            </AdornerDecorator>
+                        </Grid>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMaximized" Value="True">
+                            <Setter TargetName="RootBorder" Property="BorderThickness" Value="0" />
+                            <Setter TargetName="RootBorder" Property="Padding" Value="7" />
+                            <Setter TargetName="MaximizeButton" Property="Content" Value="&#xE923;" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+</ResourceDictionary>

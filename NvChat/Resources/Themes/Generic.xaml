@@ -1,0 +1,14 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    >
+    <!-- 앱 전역 테마 집합. App.xaml 이 이 하나만 병합하면 전체 스타일이 적용된다. -->
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="pack://application:,,,/NvChat;component/Resources/Dictionaries/Colors.xaml" />
+        <ResourceDictionary Source="pack://application:,,,/NvChat;component/Resources/Dictionaries/Brushes.xaml" />
+        <ResourceDictionary Source="pack://application:,,,/NvChat;component/Resources/Dictionaries/Converters.xaml" />
+        <ResourceDictionary Source="pack://application:,,,/NvChat;component/Resources/Dictionaries/Controls.xaml" />
+        <ResourceDictionary Source="pack://application:,,,/NvChat;component/Resources/Dictionaries/Window.xaml" />
+    </ResourceDictionary.MergedDictionaries>
+
+</ResourceDictionary>

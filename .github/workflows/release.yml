@@ -1,0 +1,39 @@
+name: release
+
+# 태그(v*)를 푸시하면 단일 exe 를 빌드해 GitHub Releases 에 자동 업로드한다.
+# 예: git tag v1.0.0 && git push origin v1.0.0
+on:
+  push:
+    tags: [ 'v*' ]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (예: v1.0.0)'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Publish single-file exe
+        run: dotnet publish NvChat/NvChat.csproj -c Release -o publish
+
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+          name: ${{ github.event.inputs.tag || github.ref_name }}
+          draft: false
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: publish/NvChat.exe

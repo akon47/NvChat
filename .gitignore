@@ -1,0 +1,49 @@
+# ===== .NET / Visual Studio =====
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+publish/
+
+# Visual Studio 캐시/사용자별 파일 (절대경로·사용자명 포함될 수 있음)
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.rsuser
+*.userprefs
+
+# 빌드 산출물
+*.dll
+*.exe
+*.pdb
+*.cache
+*.g.cs
+*.g.i.cs
+*.AssemblyInfo.cs
+*.assets.json
+project.lock.json
+project.nuget.cache
+
+# 게시 프로필의 로컬 경로
+PublishProfiles/*.pubxml.user
+
+# Rider / VS Code
+.idea/
+.vscode/
+
+# OS
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+
+# 로그/임시
+*.log
+*.tmp

@@ -1,0 +1,143 @@
+<views:WindowView
+    x:Class="NvChat.Views.SettingsWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:views="clr-namespace:NvChat.Views"
+    xmlns:vm="clr-namespace:NvChat.ViewModels"
+    mc:Ignorable="d"
+    Title="설정"
+    Width="580"
+    Height="700"
+    ResizeMode="NoResize"
+    ShowMinimizeButton="False"
+    ShowMaximizeButton="False"
+    Style="{StaticResource NvWindowStyle}"
+    WindowStartupLocation="CenterOwner"
+    d:DataContext="{d:DesignInstance vm:SettingsViewModel}"
+    >
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" Padding="24,18,24,18">
+            <StackPanel>
+
+                <!-- API 키 -->
+                <Grid Margin="0,0,0,6">
+                    <TextBlock Text="API 키" Foreground="{StaticResource ForegroundBrush}" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    <Button HorizontalAlignment="Right"
+                            Command="{Binding OpenApiKeyPageCommand}"
+                            Style="{StaticResource SubtleButtonStyle}"
+                            Content="build.nvidia.com 에서 발급 ↗"
+                            FontSize="12" />
+                </Grid>
+                <TextBlock Text="build.nvidia.com 에 로그인 후 모델 페이지의 'Get API Key' 로 발급한 nvapi- 키를 붙여넣으세요. 키는 이 PC 에만 암호화되어 저장됩니다."
+                           Foreground="{StaticResource MutedForegroundBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,8" />
+                <TextBox Text="{Binding ApiKey, UpdateSourceTrigger=PropertyChanged}"
+                         Tag="nvapi-..." FontFamily="Consolas, Segoe UI" />
+
+                <!-- 베이스 URL -->
+                <TextBlock Text="베이스 URL" Foreground="{StaticResource ForegroundBrush}" FontSize="14" FontWeight="SemiBold" Margin="0,18,0,8" />
+                <TextBox Text="{Binding BaseUrl, UpdateSourceTrigger=PropertyChanged}"
+                         Tag="https://integrate.api.nvidia.com/v1" FontFamily="Consolas, Segoe UI" />
+
+                <!-- 연결 테스트 -->
+                <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                    <Button Command="{Binding TestConnectionCommand}" Content="연결 테스트" Padding="14,7" />
+                    <TextBlock x:Name="TestStatusText"
+                               Text="{Binding TestStatus}"
+                               VerticalAlignment="Center"
+                               TextWrapping="Wrap"
+                               MaxWidth="360"
+                               FontSize="12"
+                               Margin="12,0,0,0">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Foreground" Value="{StaticResource SecondaryForegroundBrush}" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding TestSucceeded}" Value="True">
+                                        <Setter Property="Foreground" Value="{StaticResource SuccessBrush}" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </StackPanel>
+
+                <Border Height="1" Background="{StaticResource BorderBrush}" Margin="0,20,0,16" />
+
+                <!-- 기본 모델 -->
+                <TextBlock Text="새 대화 기본 모델 ID" Foreground="{StaticResource ForegroundBrush}" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,8" />
+                <TextBox Text="{Binding DefaultModelId, UpdateSourceTrigger=PropertyChanged}"
+                         Tag="meta/llama-3.3-70b-instruct" FontFamily="Consolas, Segoe UI" />
+
+                <!-- 기본 시스템 프롬프트 -->
+                <TextBlock Text="새 대화 기본 시스템 프롬프트" Foreground="{StaticResource ForegroundBrush}" FontSize="14" FontWeight="SemiBold" Margin="0,18,0,8" />
+                <TextBox Text="{Binding DefaultSystemPrompt, UpdateSourceTrigger=PropertyChanged}"
+                         Tag="(선택) 예: 당신은 친절한 한국어 도우미입니다."
+                         AcceptsReturn="True" TextWrapping="Wrap" MinHeight="60" MaxHeight="120" VerticalScrollBarVisibility="Auto" />
+
+                <!-- 동작 -->
+                <TextBlock Text="동작" Foreground="{StaticResource ForegroundBrush}" FontSize="14" FontWeight="SemiBold" Margin="0,18,0,10" />
+                <CheckBox Content="Enter 키로 전송 (끄면 Ctrl+Enter 로 전송, Enter 는 줄바꿈)" IsChecked="{Binding SendOnEnter}" Margin="0,0,0,10" />
+                <CheckBox Content="첫 응답 후 대화 제목 자동 생성" IsChecked="{Binding GenerateTitles}" />
+
+                <!-- 기본 파라미터 -->
+                <TextBlock Text="새 대화 기본 파라미터" Foreground="{StaticResource ForegroundBrush}" FontSize="14" FontWeight="SemiBold" Margin="0,18,0,10" />
+
+                <Grid Margin="0,0,0,10">
+                    <TextBlock Text="Temperature" Foreground="{StaticResource SecondaryForegroundBrush}" FontSize="12" />
+                    <TextBlock HorizontalAlignment="Right" Foreground="{StaticResource AccentBrush}" FontSize="12"
+                               Text="{Binding Value, ElementName=STemp, StringFormat=F2}" />
+                </Grid>
+                <Slider x:Name="STemp" Minimum="0" Maximum="2" SmallChange="0.01" LargeChange="0.1"
+                        Value="{Binding Temperature, Mode=TwoWay}" Margin="0,0,0,14" />
+
+                <Grid Margin="0,0,0,10">
+                    <TextBlock Text="Top P" Foreground="{StaticResource SecondaryForegroundBrush}" FontSize="12" />
+                    <TextBlock HorizontalAlignment="Right" Foreground="{StaticResource AccentBrush}" FontSize="12"
+                               Text="{Binding Value, ElementName=STopP, StringFormat=F2}" />
+                </Grid>
+                <Slider x:Name="STopP" Minimum="0" Maximum="1" SmallChange="0.01" LargeChange="0.1"
+                        Value="{Binding TopP, Mode=TwoWay}" Margin="0,0,0,14" />
+
+                <Grid Margin="0,0,0,10">
+                    <TextBlock Text="최대 토큰" Foreground="{StaticResource SecondaryForegroundBrush}" FontSize="12" />
+                    <TextBlock HorizontalAlignment="Right" Foreground="{StaticResource AccentBrush}" FontSize="12"
+                               Text="{Binding Value, ElementName=SMax, StringFormat=F0}" />
+                </Grid>
+                <Slider x:Name="SMax" Minimum="256" Maximum="8192" SmallChange="128" LargeChange="512"
+                        Value="{Binding MaxTokens, Mode=TwoWay}" Margin="0,0,0,14" />
+
+                <Grid Margin="0,0,0,10">
+                    <TextBlock Text="Frequency Penalty" Foreground="{StaticResource SecondaryForegroundBrush}" FontSize="12" />
+                    <TextBlock HorizontalAlignment="Right" Foreground="{StaticResource AccentBrush}" FontSize="12"
+                               Text="{Binding Value, ElementName=SFreq, StringFormat=F2}" />
+                </Grid>
+                <Slider x:Name="SFreq" Minimum="-2" Maximum="2" SmallChange="0.01" LargeChange="0.1"
+                        Value="{Binding FrequencyPenalty, Mode=TwoWay}" Margin="0,0,0,14" />
+
+                <Grid Margin="0,0,0,10">
+                    <TextBlock Text="Presence Penalty" Foreground="{StaticResource SecondaryForegroundBrush}" FontSize="12" />
+                    <TextBlock HorizontalAlignment="Right" Foreground="{StaticResource AccentBrush}" FontSize="12"
+                               Text="{Binding Value, ElementName=SPres, StringFormat=F2}" />
+                </Grid>
+                <Slider x:Name="SPres" Minimum="-2" Maximum="2" SmallChange="0.01" LargeChange="0.1"
+                        Value="{Binding PresencePenalty, Mode=TwoWay}" />
+
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- 하단 버튼 -->
+        <Border Grid.Row="1" Background="{StaticResource PanelBackgroundBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0" Padding="20,12">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Command="{Binding CancelCommand}" Content="취소" Padding="18,8" Margin="0,0,10,0" />
+                <Button Command="{Binding SaveCommand}" Style="{StaticResource AccentButtonStyle}" Content="저장" Padding="22,8" />
+            </StackPanel>
+        </Border>
+    </Grid>
+</views:WindowView>
