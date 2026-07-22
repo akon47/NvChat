@@ -118,8 +118,8 @@ namespace NvChat.ViewModels
 
                 return
                     "이 앱에서 보낸 요청만 센 값입니다.\n" +
-                    "build.nvidia.com 은 남은 크레딧을 API 로 알려주지 않으므로\n" +
-                    "실제 잔여량은 build.nvidia.com 계정 페이지에서 확인하세요.\n\n" +
+                    "build.nvidia.com 은 잔여 할당량을 API 로도 계정 페이지에서도\n" +
+                    "알려주지 않습니다. (차감되는 잔액이 아니라 분당 요청 제한 방식)\n\n" +
                     $"누적 {stats.TotalRequests:N0}회 ({since})\n" +
                     $"누적 토큰 입력 {stats.TotalPromptTokens:N0} · 출력 {stats.TotalCompletionTokens:N0}";
             }

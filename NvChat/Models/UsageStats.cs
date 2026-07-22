@@ -5,11 +5,10 @@ namespace NvChat.Models
     /// <summary>
     /// 로컬 사용량 집계.
     ///
-    /// build.nvidia.com 은 잔여 할당량을 응답 헤더로 알려주지 않는다(실측 확인:
-    /// nvcf-reqid / nvcf-status 만 내려온다). 또한 무료 크레딧은 하루 단위로
-    /// 리셋되는 것이 아니라 가입 시 일정량이 지급되고 누적 소모되는 구조이므로,
-    /// 실제 잔액에 대응하는 값은 <see cref="TotalRequests"/>(누적)이다.
-    /// <see cref="Requests"/>(오늘)는 참고용 보조 지표다.
+    /// build.nvidia.com 은 잔여 할당량을 알려주지 않는다.
+    /// 응답 헤더에는 nvcf-reqid / nvcf-status 만 있고(실측 확인), 계정 페이지에도
+    /// 잔액 표시가 없다. 차감되는 크레딧 잔액이 아니라 분당 요청 제한 방식이기 때문이다.
+    /// 따라서 여기 값은 "서버 잔여량"이 아니라 이 앱이 보낸 요청을 직접 센 참고 수치다.
     /// </summary>
     public sealed class UsageStats
     {
