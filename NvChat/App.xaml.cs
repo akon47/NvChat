@@ -59,10 +59,15 @@ namespace NvChat
             AppDomain.CurrentDomain.UnhandledException += OnDomainUnhandledException;
             DispatcherUnhandledException += OnDispatcherUnhandledException;
 
+            // 이전 업데이트가 남긴 .old / .new 파일 정리.
+            UpdateService.CleanupLeftovers();
+
             try
             {
                 _viewModel = new MainViewModel();
                 _viewModel.SettingsChanged += (_, __) => RegisterHotKey();
+                // 업데이트를 적용하면 새 버전이 이미 떠 있으므로 현재 인스턴스는 완전히 종료한다.
+                _viewModel.RequestExitForUpdate += (_, __) => RequestExit();
 
                 _mainWindow = new MainWindow { DataContext = _viewModel };
                 _mainWindow.Loaded += async (_, __) => await _viewModel.LoadAsync();

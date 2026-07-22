@@ -82,6 +82,142 @@ namespace NvChat.ViewModels
         #endregion
 
 
+        #region Update
+
+        private readonly UpdateService _updateService = new UpdateService();
+        private UpdateInfo _update;
+        private bool _isUpdating;
+        private double _updateProgress;
+        private ICommand _installUpdateCommand;
+        private ICommand _dismissUpdateCommand;
+
+        /// <summary>새 버전이 확인되어 안내 배너를 띄울지 여부.</summary>
+        public bool HasUpdate => _update != null;
+
+        /// <summary>"새 버전 v1.4.0 이 있습니다 (12.3 MB)" 형태의 안내.</summary>
+        public string UpdateText
+        {
+            get
+            {
+                if (_update == null)
+                    return null;
+
+                var size = _update.SizeText;
+                var version = _update.Tag ?? ("v" + _update.Version.ToString(3));
+
+                return size == null
+                    ? $"새 버전 {version} 이 있습니다."
+                    : $"새 버전 {version} 이 있습니다. ({size})";
+            }
+        }
+
+        /// <summary>업데이트를 내려받는 중인지.</summary>
+        public bool IsUpdating
+        {
+            get => _isUpdating;
+            private set
+            {
+                if (SetProperty(ref _isUpdating, value))
+                    RaisePropertyChanged(nameof(IsUpdateIdle));
+            }
+        }
+
+        public bool IsUpdateIdle => _isUpdating == false;
+
+        /// <summary>다운로드 진행률(0~100).</summary>
+        public double UpdateProgress
+        {
+            get => _updateProgress;
+            private set
+            {
+                if (SetProperty(ref _updateProgress, value))
+                    RaisePropertyChanged(nameof(UpdateProgressText));
+            }
+        }
+
+        /// <summary>"내려받는 중 45%" 형태의 진행 표시.</summary>
+        public string UpdateProgressText => _updateProgress >= 99.5
+            ? "설치하고 재시작합니다…"
+            : $"내려받는 중 {_updateProgress:0}%";
+
+        public ICommand InstallUpdateCommand => _installUpdateCommand ?? (_installUpdateCommand = new DelegateCommand(OnInstallUpdate, () => _update != null && _isUpdating == false));
+
+        public ICommand DismissUpdateCommand => _dismissUpdateCommand ?? (_dismissUpdateCommand = new DelegateCommand(() =>
+        {
+            _update = null;
+            RaiseUpdateChanged();
+        }));
+
+        /// <summary>
+        /// 새 버전이 있는지 조용히 확인한다. (시작 시 1회)
+        /// </summary>
+        public async Task CheckForUpdateAsync()
+        {
+            if (_settings.AutoCheckUpdates == false)
+                return;
+
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+            var info = await _updateService.CheckAsync(cts.Token);
+
+            if (info == null)
+                return;
+
+            _update = info;
+            RaiseUpdateChanged();
+        }
+
+        private async void OnInstallUpdate()
+        {
+            var info = _update;
+            if (info == null || _isUpdating)
+                return;
+
+            IsUpdating = true;
+            UpdateProgress = 0;
+            RaiseUpdateChanged();
+
+            try
+            {
+                var progress = new Progress<double>(p => UpdateProgress = p);
+
+                using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(15));
+                await _updateService.DownloadAndApplyAsync(info, progress, cts.Token);
+
+                // 새 프로세스가 떴으므로 현재 인스턴스는 종료한다.
+                RequestExitForUpdate?.Invoke(this, EventArgs.Empty);
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "업데이트 실패: " + ex.Message + " (릴리즈 페이지에서 직접 내려받을 수 있습니다)";
+
+                try
+                {
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(UpdateService.ReleasePage) { UseShellExecute = true });
+                }
+                catch
+                {
+                }
+            }
+            finally
+            {
+                IsUpdating = false;
+                RaiseUpdateChanged();
+            }
+        }
+
+        /// <summary>업데이트 적용 후 현재 인스턴스를 종료해 달라는 요청.</summary>
+        public event EventHandler RequestExitForUpdate;
+
+        private void RaiseUpdateChanged()
+        {
+            RaisePropertyChanged(nameof(HasUpdate));
+            RaisePropertyChanged(nameof(UpdateText));
+            (_installUpdateCommand as DelegateCommand)?.RaiseCanExecuteChanged();
+        }
+
+        #endregion
+
+
         #region Usage meter
 
         // build.nvidia.com 은 잔여 할당량을 응답 헤더로도, 별도 API 로도 알려주지 않는다(실측 확인).
@@ -545,6 +681,9 @@ namespace NvChat.ViewModels
                 StatusMessage = "시작하려면 build.nvidia.com API 키가 필요합니다. 설정에서 입력하세요.";
                 OnOpenSettings();
             }
+
+            // 새 버전 확인은 채팅 준비가 끝난 뒤 조용히 진행한다.
+            await CheckForUpdateAsync();
         }
 
         /// <summary>대화를 저장한다. (트레이 최소화 등에서도 호출되므로 스트림은 건드리지 않는다.)</summary>

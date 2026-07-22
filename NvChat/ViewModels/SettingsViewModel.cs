@@ -34,6 +34,7 @@ namespace NvChat.ViewModels
             _responseStyle = current.ResponseStyle;
             _globalHotkey = string.IsNullOrWhiteSpace(current.GlobalHotkey) ? "Ctrl+Shift+Space" : current.GlobalHotkey;
             _minimizeToTray = current.MinimizeToTrayOnClose;
+            _autoCheckUpdates = current.AutoCheckUpdates;
             _usage = current.Usage ?? new UsageStats();
             Presets = new ObservableCollection<PromptPreset>((current.Presets ?? AppSettings.DefaultPresets()).Select(p => new PromptPreset(p.Name, p.Text)));
             _temperature = parameters.Temperature;
@@ -298,6 +299,18 @@ namespace NvChat.ViewModels
         private readonly UsageStats _usage;
         private bool _resetUsage;
 
+        private bool _autoCheckUpdates;
+
+        /// <summary>시작할 때 새 버전을 확인할지 여부.</summary>
+        public bool AutoCheckUpdates
+        {
+            get => _autoCheckUpdates;
+            set => SetProperty(ref _autoCheckUpdates, value);
+        }
+
+        /// <summary>"현재 버전 1.3.0" 표시.</summary>
+        public string CurrentVersionText => "현재 버전 " + UpdateService.CurrentVersion.ToString(3);
+
         /// <summary>현재까지의 누적 사용량 요약.</summary>
         public string UsageSummary
         {
@@ -333,6 +346,7 @@ namespace NvChat.ViewModels
                 ResponseStyle = _responseStyle ?? string.Empty,
                 GlobalHotkey = string.IsNullOrWhiteSpace(_globalHotkey) ? "끄기" : _globalHotkey,
                 MinimizeToTrayOnClose = _minimizeToTray,
+                AutoCheckUpdates = _autoCheckUpdates,
                 // null = 사용량 집계를 건드리지 않음(설정 창이 열린 동안에도 계속 쌓이므로 살아 있는 값을 유지한다).
                 Usage = _resetUsage ? new UsageStats { CountingSince = DateTime.Now, Date = UsageStats.Today } : null,
                 Presets = Presets

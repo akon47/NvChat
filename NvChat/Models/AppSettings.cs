@@ -64,6 +64,9 @@ namespace NvChat.Models
         /// <summary>로컬 사용량 집계(누적/오늘 요청 수·토큰 수).</summary>
         public UsageStats Usage { get; set; } = new UsageStats();
 
+        /// <summary>시작할 때 GitHub Releases 에서 새 버전을 확인할지 여부.</summary>
+        public bool AutoCheckUpdates { get; set; } = true;
+
 
         // ===== 창 상태(위치/크기) 복원용 =====
         public double? WindowLeft { get; set; }

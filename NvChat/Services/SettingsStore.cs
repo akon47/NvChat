@@ -140,7 +140,8 @@ namespace NvChat.Services
                 WindowWidth = settings.WindowWidth,
                 WindowHeight = settings.WindowHeight,
                 WindowMaximized = settings.WindowMaximized,
-                Usage = settings.Usage
+                Usage = settings.Usage,
+                AutoCheckUpdates = settings.AutoCheckUpdates
             };
 
             try

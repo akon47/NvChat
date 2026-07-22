@@ -28,6 +28,13 @@ jobs:
       - name: Publish single-file exe
         run: dotnet publish NvChat/NvChat.csproj -c Release -o publish
 
+      # 앱 내 자동 업데이트가 내려받은 파일을 검증하는 데 쓴다.
+      - name: Compute checksum
+        shell: pwsh
+        run: |
+          $hash = (Get-FileHash publish/NvChat.exe -Algorithm SHA256).Hash.ToLower()
+          "$hash  NvChat.exe" | Out-File -Encoding ascii -NoNewline publish/NvChat.exe.sha256
+
       - name: Upload to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -36,7 +43,9 @@ jobs:
           draft: false
           generate_release_notes: true
           fail_on_unmatched_files: true
-          files: publish/NvChat.exe
+          files: |
+            publish/NvChat.exe
+            publish/NvChat.exe.sha256
           body: |
             ## NvChat ${{ github.event.inputs.tag || github.ref_name }}
 

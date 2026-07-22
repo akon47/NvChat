@@ -86,6 +86,15 @@
                 <CheckBox Content="Enter 키로 전송 (끄면 Ctrl+Enter 로 전송, Enter 는 줄바꿈)" IsChecked="{Binding SendOnEnter}" Margin="0,0,0,10" />
                 <CheckBox Content="첫 응답 후 대화 제목 자동 생성" IsChecked="{Binding GenerateTitles}" />
 
+                <!-- 업데이트 -->
+                <TextBlock Text="업데이트" Foreground="{StaticResource ForegroundBrush}" FontSize="14" FontWeight="SemiBold" Margin="0,18,0,6" />
+                <Grid Margin="0,0,0,8">
+                    <CheckBox Content="시작할 때 새 버전 확인" IsChecked="{Binding AutoCheckUpdates}" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding CurrentVersionText}" HorizontalAlignment="Right" Foreground="{StaticResource MutedForegroundBrush}" FontSize="11.5" VerticalAlignment="Center" />
+                </Grid>
+                <TextBlock Foreground="{StaticResource MutedForegroundBrush}" FontSize="11.5" TextWrapping="Wrap"
+                           Text="새 버전이 있으면 메인 창 상단에 안내가 뜹니다. '지금 업데이트'를 누르면 GitHub Releases 에서 내려받아 체크섬을 확인한 뒤 실행 파일을 교체하고 재시작합니다." />
+
                 <!-- 사용량 -->
                 <TextBlock Text="사용량" Foreground="{StaticResource ForegroundBrush}" FontSize="14" FontWeight="SemiBold" Margin="0,18,0,6" />
                 <TextBlock Foreground="{StaticResource MutedForegroundBrush}" FontSize="11.5" TextWrapping="Wrap" Margin="0,0,0,10"
