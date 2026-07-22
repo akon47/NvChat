@@ -6,6 +6,7 @@
     <ResourceDictionary.MergedDictionaries>
         <ResourceDictionary Source="pack://application:,,,/NvChat;component/Resources/Dictionaries/Brushes.xaml" />
         <ResourceDictionary Source="pack://application:,,,/NvChat;component/Resources/Dictionaries/Converters.xaml" />
+        <ResourceDictionary Source="pack://application:,,,/NvChat;component/Resources/Dictionaries/Icons.xaml" />
     </ResourceDictionary.MergedDictionaries>
 
     <!-- 캡션(창) 버튼 -->
@@ -73,6 +74,7 @@
         <Setter Property="FontSize" Value="13" />
         <Setter Property="TextOptions.TextFormattingMode" Value="Display" />
         <Setter Property="TextOptions.TextRenderingMode" Value="ClearType" />
+        <Setter Property="UseLayoutRounding" Value="True" />
         <Setter Property="WindowChrome.WindowChrome">
             <Setter.Value>
                 <WindowChrome CaptionHeight="40"
@@ -106,14 +108,8 @@
 
                                 <!-- 브랜드 + 제목 -->
                                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0">
-                                    <Border Width="22" Height="22" CornerRadius="6" Background="{StaticResource AccentBrush}">
-                                        <TextBlock Text="N"
-                                                   Foreground="{StaticResource AccentForegroundBrush}"
-                                                   FontWeight="Bold"
-                                                   FontSize="13"
-                                                   HorizontalAlignment="Center"
-                                                   VerticalAlignment="Center" />
-                                    </Border>
+                                    <Image Source="pack://application:,,,/NvChat;component/Resources/brand.png"
+                                           Width="20" Height="20" RenderOptions.BitmapScalingMode="HighQuality" />
                                     <TextBlock Text="{TemplateBinding Title}"
                                                Foreground="{StaticResource SecondaryForegroundBrush}"
                                                FontSize="12.5"
@@ -133,18 +129,22 @@
                                     <Button x:Name="MinimizeButton"
                                             Style="{StaticResource CaptionButtonStyle}"
                                             Command="{TemplateBinding MinimizeCommand}"
-                                            Content="&#xE921;"
-                                            Visibility="{Binding ShowMinimizeButton, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource BoolToVis}}" />
+                                            Visibility="{Binding ShowMinimizeButton, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource BoolToVis}}">
+                                        <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconWinMinimize}" Width="11" Height="11" />
+                                    </Button>
                                     <Button x:Name="MaximizeButton"
                                             Style="{StaticResource CaptionButtonStyle}"
                                             Command="{TemplateBinding MaximizeCommand}"
-                                            Content="&#xE922;"
-                                            Visibility="{Binding ShowMaximizeButton, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource BoolToVis}}" />
+                                            Visibility="{Binding ShowMaximizeButton, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource BoolToVis}}">
+                                        <Path x:Name="MaximizePath" Style="{StaticResource IconStyle}" Data="{StaticResource IconWinMaximize}" Width="11" Height="11" />
+                                    </Button>
                                     <Button x:Name="CloseButton"
                                             Style="{StaticResource CaptionCloseButtonStyle}"
                                             Command="{TemplateBinding CloseCommand}"
-                                            Content="&#xE8BB;"
-                                            Margin="0,0,4,0" />
+                                            Margin="0,0,4,0"
+                                            Visibility="{Binding ShowCloseButton, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource BoolToVis}}">
+                                        <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconClose}" Width="11" Height="11" />
+                                    </Button>
                                 </StackPanel>
                             </Grid>
 
@@ -158,7 +158,7 @@
                         <Trigger Property="IsMaximized" Value="True">
                             <Setter TargetName="RootBorder" Property="BorderThickness" Value="0" />
                             <Setter TargetName="RootBorder" Property="Padding" Value="7" />
-                            <Setter TargetName="MaximizeButton" Property="Content" Value="&#xE923;" />
+                            <Setter TargetName="MaximizePath" Property="Data" Value="{StaticResource IconWinRestore}" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

@@ -1,6 +1,7 @@
 using NvChat.Models;
 using NvChat.ViewModels;
 using System;
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -28,6 +29,32 @@ namespace NvChat.Views
         #region Properties
 
         private MainViewModel ViewModel => DataContext as MainViewModel;
+
+        /// <summary>true 로 설정된 경우에만 실제로 닫힌다(App.RequestExit 가 설정).</summary>
+        public bool AllowClose { get; set; }
+
+        #endregion
+
+
+        #region Overrides
+
+        protected override void OnClosing(CancelEventArgs e)
+        {
+            if (AllowClose)
+                return; // 실제 종료(App.RequestExit)
+
+            e.Cancel = true;
+
+            if (ViewModel?.MinimizeToTrayOnClose ?? true)
+            {
+                Hide();
+                ViewModel?.SaveState();
+            }
+            else
+            {
+                (Application.Current as App)?.RequestExit();
+            }
+        }
 
         #endregion
 
@@ -201,6 +228,47 @@ namespace NvChat.Views
         private void ScrollToBottomButton_Click(object sender, RoutedEventArgs e)
         {
             MessagesScroller.ScrollToEnd();
+        }
+
+        #endregion
+
+
+        #region Helpers - presets
+
+        private void PresetButton_Click(object sender, RoutedEventArgs e)
+        {
+            var viewModel = ViewModel;
+            if (viewModel == null || sender is not Button button)
+                return;
+
+            var menu = new ContextMenu
+            {
+                PlacementTarget = button,
+                Placement = System.Windows.Controls.Primitives.PlacementMode.Top
+            };
+
+            var presets = viewModel.Presets;
+            if (presets == null || presets.Count == 0)
+            {
+                menu.Items.Add(new MenuItem { Header = "(프리셋 없음 — 설정에서 추가)", IsEnabled = false });
+            }
+            else
+            {
+                foreach (var preset in presets)
+                {
+                    var captured = preset;
+                    var item = new MenuItem { Header = preset.Name };
+                    item.Click += (_, __) =>
+                    {
+                        if (viewModel.InsertPresetCommand.CanExecute(captured))
+                            viewModel.InsertPresetCommand.Execute(captured);
+                        InputBox.Focus();
+                    };
+                    menu.Items.Add(item);
+                }
+            }
+
+            menu.IsOpen = true;
         }
 
         #endregion

@@ -138,6 +138,18 @@ namespace NvChat.Views
             set => SetValue(ShowMaximizeButtonProperty, value);
         }
 
+
+        public static readonly DependencyProperty ShowCloseButtonProperty = DependencyProperty.Register
+        (
+            nameof(ShowCloseButton), typeof(bool), typeof(WindowView), new FrameworkPropertyMetadata(true)
+        );
+
+        public bool ShowCloseButton
+        {
+            get => (bool)GetValue(ShowCloseButtonProperty);
+            set => SetValue(ShowCloseButtonProperty, value);
+        }
+
         #endregion
 
 

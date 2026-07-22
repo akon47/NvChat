@@ -6,6 +6,7 @@
     <RootNamespace>NvChat</RootNamespace>
     <AssemblyName>NvChat</AssemblyName>
     <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
     <Nullable>disable</Nullable>
     <LangVersion>latest</LangVersion>
     <Deterministic>true</Deterministic>
@@ -13,9 +14,11 @@
     <AssemblyTitle>NvChat</AssemblyTitle>
     <Product>NvChat</Product>
     <Company>NvChat</Company>
-    <Version>1.1.0</Version>
+    <Version>1.2.0</Version>
     <NeutralLanguage>ko-KR</NeutralLanguage>
     <ApplicationIcon>Resources\app.ico</ApplicationIcon>
+    <!-- WPF 는 app.manifest 의 PerMonitorV2 를 사용. WinForms(트레이용) 활성화로 뜨는 DPI 경고만 억제. -->
+    <NoWarn>$(NoWarn);WFAC010</NoWarn>
   </PropertyGroup>
 
   <!-- RID 는 restore 를 위해 항상 지정하되, Debug 내부 루프는 프레임워크 의존(가볍게)으로 둔다. -->
@@ -42,6 +45,13 @@
     <!-- API 키를 로컬에 저장할 때 Windows DPAPI(CurrentUser)로 암호화하기 위한 유일한 외부 의존성.
          순수 관리형 어셈블리라 단일 exe에 문제없이 포함된다. -->
     <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 트레이/창 아이콘을 스트림으로 로드하기 위해 리소스로도 포함(ApplicationIcon 과 별개). -->
+    <Resource Include="Resources\app.ico" />
+    <!-- 인앱 브랜드 마크(타이틀바/빈 상태) -->
+    <Resource Include="Resources\brand.png" />
   </ItemGroup>
 
 </Project>

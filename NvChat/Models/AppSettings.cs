@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace NvChat.Models
 {
     /// <summary>
@@ -41,11 +43,41 @@ namespace NvChat.Models
         /// </summary>
         public bool GenerateTitles { get; set; } = true;
 
+        // ===== 개인화(커스텀 지침) — 모든 대화에 자동 적용 =====
+        /// <summary>나에 대한 정보(모델이 알아야 할 것).</summary>
+        public string AboutYou { get; set; } = "";
+
+        /// <summary>응답 방식/톤 지침.</summary>
+        public string ResponseStyle { get; set; } = "";
+
+        /// <summary>저장된 프롬프트 프리셋.</summary>
+        public List<PromptPreset> Presets { get; set; } = DefaultPresets();
+
+        // ===== 데스크톱 런처 =====
+        /// <summary>빠른 채팅 전역 단축키(예: "Ctrl+Alt+Space", "끄기").</summary>
+        public string GlobalHotkey { get; set; } = "Ctrl+Alt+Space";
+
+        /// <summary>닫기 버튼을 누르면 종료하지 않고 트레이로 최소화.</summary>
+        public bool MinimizeToTrayOnClose { get; set; } = true;
+
         // ===== 창 상태(위치/크기) 복원용 =====
         public double? WindowLeft { get; set; }
         public double? WindowTop { get; set; }
         public double? WindowWidth { get; set; }
         public double? WindowHeight { get; set; }
         public bool WindowMaximized { get; set; }
+
+        public static List<PromptPreset> DefaultPresets()
+        {
+            return new List<PromptPreset>
+            {
+                new PromptPreset("영어로 번역", "다음 문장을 자연스러운 영어로 번역해줘:\n\n"),
+                new PromptPreset("한국어로 번역", "Translate the following into natural Korean:\n\n"),
+                new PromptPreset("요약", "다음 내용을 핵심만 간단히 요약해줘:\n\n"),
+                new PromptPreset("코드 리뷰", "다음 코드를 리뷰하고 버그·개선점을 알려줘:\n\n"),
+                new PromptPreset("쉽게 설명", "다음 개념을 초보자도 이해하도록 예시와 함께 쉽게 설명해줘:\n\n"),
+                new PromptPreset("문법 교정", "다음 글의 맞춤법과 문법을 교정하고, 무엇을 고쳤는지 알려줘:\n\n")
+            };
+        }
     }
 }

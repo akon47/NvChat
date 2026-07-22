@@ -54,6 +54,8 @@ namespace NvChat.ViewModels
         private bool _suppressModelSync;
         private bool _refreshingModels;
         private ICollectionView _conversationsView;
+        private ICollectionView _modelsView;
+        private string _modelSearchText;
 
         private static readonly string[] _fallbackModelIds =
         {
@@ -98,6 +100,21 @@ namespace NvChat.ViewModels
             }
         }
 
+        /// <summary>모델 선택 팝업용 검색/그룹 뷰.</summary>
+        public ICollectionView ModelsView
+        {
+            get
+            {
+                if (_modelsView == null)
+                    _modelsView = BuildModelsView();
+
+                return _modelsView;
+            }
+        }
+
+        /// <summary>프롬프트 프리셋(설정에서 관리).</summary>
+        public System.Collections.Generic.IReadOnlyList<PromptPreset> Presets => _settings.Presets ?? new System.Collections.Generic.List<PromptPreset>();
+
         public IReadOnlyList<string> ExamplePrompts { get; } = new[]
         {
             "간단한 파이썬 스크립트로 CSV 파일을 읽어 요약해줘",
@@ -137,9 +154,38 @@ namespace NvChat.ViewModels
             {
                 if (SetProperty(ref _selectedModel, value))
                 {
-                    if (_suppressModelSync == false && _selectedConversation != null && value != null)
-                        _selectedConversation.ModelId = value.Id;
+                    if (_suppressModelSync == false && value != null)
+                    {
+                        if (_selectedConversation != null)
+                            _selectedConversation.ModelId = value.Id;
+
+                        IsModelPickerOpen = false;
+                    }
                 }
+            }
+        }
+
+
+        public string ModelSearchText
+        {
+            get => _modelSearchText;
+            set
+            {
+                if (SetProperty(ref _modelSearchText, value))
+                    ModelsView.Refresh();
+            }
+        }
+
+
+        private bool _isModelPickerOpen;
+
+        public bool IsModelPickerOpen
+        {
+            get => _isModelPickerOpen;
+            set
+            {
+                if (SetProperty(ref _isModelPickerOpen, value) && value == false && string.IsNullOrEmpty(_modelSearchText) == false)
+                    ModelSearchText = string.Empty;
             }
         }
 
@@ -247,6 +293,8 @@ namespace NvChat.ViewModels
 
         public bool SendOnEnter => _settings?.SendOnEnter ?? true;
 
+        public bool MinimizeToTrayOnClose => _settings?.MinimizeToTrayOnClose ?? true;
+
         #endregion
 
 
@@ -291,6 +339,12 @@ namespace NvChat.ViewModels
         private DelegateCommand _toggleSidebarCommand;
         public ICommand ToggleSidebarCommand => _toggleSidebarCommand ?? (_toggleSidebarCommand = new DelegateCommand(() => IsSidebarCollapsed = !IsSidebarCollapsed));
 
+        private DelegateCommand _toggleModelPickerCommand;
+        public ICommand ToggleModelPickerCommand => _toggleModelPickerCommand ?? (_toggleModelPickerCommand = new DelegateCommand(() => IsModelPickerOpen = !IsModelPickerOpen));
+
+        private DelegateCommand<PromptPreset> _insertPresetCommand;
+        public ICommand InsertPresetCommand => _insertPresetCommand ?? (_insertPresetCommand = new DelegateCommand<PromptPreset>(OnInsertPreset, p => p != null));
+
         private DelegateCommand<ChatMessageViewModel> _regenerateMessageCommand;
         public ICommand RegenerateMessageCommand => _regenerateMessageCommand ?? (_regenerateMessageCommand = new DelegateCommand<ChatMessageViewModel>(OnRegenerateMessage, m => m != null && _isStreaming == false));
 
@@ -325,6 +379,9 @@ namespace NvChat.ViewModels
 
         /// <summary>설정 창을 열어달라는 요청. View 가 구독한다.</summary>
         public event EventHandler SettingsRequested;
+
+        /// <summary>설정이 적용되었을 때. App 이 전역 단축키 재등록 등에 사용.</summary>
+        public event EventHandler SettingsChanged;
 
         /// <summary>확인 대화상자. View 가 설정한다. (제목, 메시지) → 확인 여부.</summary>
         public Func<string, string, bool> ConfirmCallback { get; set; }
@@ -392,10 +449,14 @@ namespace NvChat.ViewModels
 
             RaisePropertyChanged(nameof(HasApiKey));
             RaisePropertyChanged(nameof(SendOnEnter));
+            RaisePropertyChanged(nameof(MinimizeToTrayOnClose));
+            RaisePropertyChanged(nameof(Presets));
             RaiseCommandStates();
 
             if (HasStatusMessage && HasApiKey)
                 StatusMessage = null;
+
+            SettingsChanged?.Invoke(this, EventArgs.Empty);
 
             _ = RefreshModelsAsync();
         }
@@ -815,7 +876,7 @@ namespace NvChat.ViewModels
             var modelId = _selectedModel?.Id ?? conversation.ModelId ?? _settings.DefaultModelId;
             conversation.ModelId = modelId;
 
-            var apiMessages = BuildApiMessages(conversation, null);
+            var apiMessages = BuildApiMessages(conversation);
 
             var assistant = new ChatMessageViewModel(ChatRole.Assistant, string.Empty) { IsStreaming = true };
             conversation.Messages.Add(assistant);
@@ -979,16 +1040,17 @@ namespace NvChat.ViewModels
             }
         }
 
-        private static List<ChatMessage> BuildApiMessages(ConversationViewModel conversation, ChatMessageViewModel exclude)
+        private List<ChatMessage> BuildApiMessages(ConversationViewModel conversation)
         {
             var messages = new List<ChatMessage>();
 
-            if (string.IsNullOrWhiteSpace(conversation.SystemPrompt) == false)
-                messages.Add(new ChatMessage { Role = ChatRole.System, Content = conversation.SystemPrompt });
+            var system = ComposeSystemPrompt(conversation);
+            if (string.IsNullOrWhiteSpace(system) == false)
+                messages.Add(new ChatMessage { Role = ChatRole.System, Content = system });
 
             foreach (var message in conversation.Messages)
             {
-                if (ReferenceEquals(message, exclude))
+                if (message.IsStreaming)
                     continue;
 
                 if (message.HasError)
@@ -1006,6 +1068,56 @@ namespace NvChat.ViewModels
             }
 
             return messages;
+        }
+
+        /// <summary>커스텀 지침(나에 대해 + 응답 방식) + 대화별 시스템 프롬프트를 합친다.</summary>
+        private string ComposeSystemPrompt(ConversationViewModel conversation)
+        {
+            var parts = new List<string>();
+
+            var about = _settings.AboutYou?.Trim();
+            if (string.IsNullOrEmpty(about) == false)
+                parts.Add("[사용자에 대한 정보]\n" + about);
+
+            var style = _settings.ResponseStyle?.Trim();
+            if (string.IsNullOrEmpty(style) == false)
+                parts.Add("[응답 방식]\n" + style);
+
+            var sys = conversation.SystemPrompt?.Trim();
+            if (string.IsNullOrEmpty(sys) == false)
+                parts.Add(sys);
+
+            return string.Join("\n\n", parts);
+        }
+
+        private void OnInsertPreset(PromptPreset preset)
+        {
+            if (preset == null)
+                return;
+
+            InputText = string.IsNullOrEmpty(_inputText) ? preset.Text : (_inputText + "\n" + preset.Text);
+        }
+
+        private ICollectionView BuildModelsView()
+        {
+            var view = CollectionViewSource.GetDefaultView(Models);
+            view.GroupDescriptions.Add(new PropertyGroupDescription(nameof(NvModel.Publisher)));
+            view.SortDescriptions.Add(new SortDescription(nameof(NvModel.Publisher), ListSortDirection.Ascending));
+            view.SortDescriptions.Add(new SortDescription(nameof(NvModel.Name), ListSortDirection.Ascending));
+            view.Filter = FilterModel;
+            return view;
+        }
+
+        private bool FilterModel(object item)
+        {
+            if (string.IsNullOrWhiteSpace(_modelSearchText))
+                return true;
+
+            if (item is not NvModel model)
+                return false;
+
+            var q = _modelSearchText.Trim();
+            return (model.Id ?? string.Empty).IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         private static string MakeTitle(string text)

@@ -2,7 +2,10 @@ using NvChat.Commands;
 using NvChat.Models;
 using NvChat.Services;
 using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
@@ -27,6 +30,11 @@ namespace NvChat.ViewModels
             _defaultSystemPrompt = current.DefaultSystemPrompt;
             _sendOnEnter = current.SendOnEnter;
             _generateTitles = current.GenerateTitles;
+            _aboutYou = current.AboutYou;
+            _responseStyle = current.ResponseStyle;
+            _globalHotkey = string.IsNullOrWhiteSpace(current.GlobalHotkey) ? "Ctrl+Alt+Space" : current.GlobalHotkey;
+            _minimizeToTray = current.MinimizeToTrayOnClose;
+            Presets = new ObservableCollection<PromptPreset>((current.Presets ?? AppSettings.DefaultPresets()).Select(p => new PromptPreset(p.Name, p.Text)));
             _temperature = parameters.Temperature;
             _topP = parameters.TopP;
             _maxTokens = parameters.MaxTokens;
@@ -156,6 +164,54 @@ namespace NvChat.ViewModels
         }
 
 
+        private string _aboutYou;
+
+        public string AboutYou
+        {
+            get => _aboutYou;
+            set => SetProperty(ref _aboutYou, value);
+        }
+
+
+        private string _responseStyle;
+
+        public string ResponseStyle
+        {
+            get => _responseStyle;
+            set => SetProperty(ref _responseStyle, value);
+        }
+
+
+        private string _globalHotkey;
+
+        public string GlobalHotkey
+        {
+            get => _globalHotkey;
+            set => SetProperty(ref _globalHotkey, value);
+        }
+
+
+        private bool _minimizeToTray;
+
+        public bool MinimizeToTrayOnClose
+        {
+            get => _minimizeToTray;
+            set => SetProperty(ref _minimizeToTray, value);
+        }
+
+
+        public ObservableCollection<PromptPreset> Presets { get; private set; }
+
+        public IReadOnlyList<string> HotkeyOptions { get; } = new[]
+        {
+            "Ctrl+Alt+Space",
+            "Alt+Space",
+            "Ctrl+Shift+Space",
+            "Ctrl+Alt+N",
+            "끄기"
+        };
+
+
         private bool _isTesting;
 
         public bool IsTesting
@@ -210,6 +266,16 @@ namespace NvChat.ViewModels
 
         public ICommand OpenApiKeyPageCommand => _openApiKeyPageCommand ?? (_openApiKeyPageCommand = new DelegateCommand(OnOpenApiKeyPage));
 
+
+        private DelegateCommand _addPresetCommand;
+
+        public ICommand AddPresetCommand => _addPresetCommand ?? (_addPresetCommand = new DelegateCommand(() => Presets.Add(new PromptPreset("새 프리셋", ""))));
+
+
+        private DelegateCommand<PromptPreset> _removePresetCommand;
+
+        public ICommand RemovePresetCommand => _removePresetCommand ?? (_removePresetCommand = new DelegateCommand<PromptPreset>(p => { if (p != null) Presets.Remove(p); }));
+
         #endregion
 
 
@@ -225,6 +291,14 @@ namespace NvChat.ViewModels
                 DefaultSystemPrompt = _defaultSystemPrompt ?? string.Empty,
                 SendOnEnter = _sendOnEnter,
                 GenerateTitles = _generateTitles,
+                AboutYou = _aboutYou ?? string.Empty,
+                ResponseStyle = _responseStyle ?? string.Empty,
+                GlobalHotkey = string.IsNullOrWhiteSpace(_globalHotkey) ? "끄기" : _globalHotkey,
+                MinimizeToTrayOnClose = _minimizeToTray,
+                Presets = Presets
+                    .Where(p => string.IsNullOrWhiteSpace(p.Name) == false)
+                    .Select(p => new PromptPreset(p.Name.Trim(), p.Text ?? string.Empty))
+                    .ToList(),
                 DefaultParameters = new GenerationParameters
                 {
                     Temperature = _temperature,

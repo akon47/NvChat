@@ -7,6 +7,7 @@
         <ResourceDictionary Source="pack://application:,,,/NvChat;component/Resources/Dictionaries/Colors.xaml" />
         <ResourceDictionary Source="pack://application:,,,/NvChat;component/Resources/Dictionaries/Brushes.xaml" />
         <ResourceDictionary Source="pack://application:,,,/NvChat;component/Resources/Dictionaries/Converters.xaml" />
+        <ResourceDictionary Source="pack://application:,,,/NvChat;component/Resources/Dictionaries/Icons.xaml" />
         <ResourceDictionary Source="pack://application:,,,/NvChat;component/Resources/Dictionaries/Controls.xaml" />
         <ResourceDictionary Source="pack://application:,,,/NvChat;component/Resources/Dictionaries/Window.xaml" />
     </ResourceDictionary.MergedDictionaries>

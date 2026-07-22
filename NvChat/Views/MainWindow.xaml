@@ -23,41 +23,76 @@
         <KeyBinding Modifiers="Control" Key="N" Command="{Binding NewConversationCommand}" />
     </views:WindowView.InputBindings>
 
-    <!-- ================= 타이틀바: 사이드바 토글 + 모델 선택 + 설정 ================= -->
+    <!-- ================= 타이틀바: 사이드바 토글 + 모델 선택기 + 설정 ================= -->
     <views:WindowView.TitleBarContent>
-        <Grid Margin="6,0,4,0">
+        <Grid Margin="4,0,4,0">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
-                <Button Command="{Binding ToggleSidebarCommand}"
-                        Style="{StaticResource SubtleButtonStyle}"
-                        FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="15" Content="&#xE700;"
-                        Padding="9,6" ToolTip="사이드바 토글" />
-                <TextBlock Text="모델" Foreground="{StaticResource MutedForegroundBrush}" VerticalAlignment="Center" Margin="8,0,8,0" FontSize="12" />
-                <ComboBox Width="330" MaxDropDownHeight="460" VerticalAlignment="Center"
-                          ItemsSource="{Binding Models}" SelectedItem="{Binding SelectedModel}" ToolTip="사용할 모델 선택">
-                    <ComboBox.ItemTemplate>
-                        <DataTemplate>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="{Binding Name}" Foreground="{StaticResource ForegroundBrush}" TextTrimming="CharacterEllipsis" />
-                                <TextBlock Grid.Column="1" Text="{Binding Publisher}" Foreground="{StaticResource MutedForegroundBrush}" FontSize="11.5" Margin="10,0,0,0" />
+                <Button Command="{Binding ToggleSidebarCommand}" Style="{StaticResource SubtleButtonStyle}" Padding="8" ToolTip="사이드바 토글">
+                    <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconMenu}" Width="19" Height="19" />
+                </Button>
+
+                <!-- 모델 선택기 -->
+                <Button x:Name="ModelPickerButton" Command="{Binding ToggleModelPickerCommand}" Style="{StaticResource SubtleButtonStyle}" Padding="10,6" Margin="4,0,0,0" ToolTip="모델 선택">
+                    <StackPanel Orientation="Horizontal">
+                        <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconChat}" Width="15" Height="15" Margin="0,0,7,0" />
+                        <TextBlock Text="{Binding SelectedModel.Name, TargetNullValue='모델 선택', FallbackValue='모델 선택'}" Foreground="{StaticResource ForegroundBrush}" VerticalAlignment="Center" MaxWidth="280" TextTrimming="CharacterEllipsis" />
+                        <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconChevronDown}" Width="13" Height="13" Margin="7,0,0,0" />
+                    </StackPanel>
+                </Button>
+
+                <Popup IsOpen="{Binding IsModelPickerOpen, Mode=TwoWay}" PlacementTarget="{Binding ElementName=ModelPickerButton}" Placement="Bottom"
+                       StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade" Focusable="False">
+                    <Border Background="{StaticResource CardBackgroundBrush}" BorderBrush="{StaticResource BorderStrongBrush}" BorderThickness="1" CornerRadius="10"
+                            Width="440" MaxHeight="500" Margin="0,4,0,0" SnapsToDevicePixels="True">
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="18" ShadowDepth="3" Opacity="0.5" Color="Black" />
+                        </Border.Effect>
+                        <Grid Margin="8">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+                            <Grid Grid.Row="0" Margin="0,0,0,6">
+                                <TextBox Text="{Binding ModelSearchText, UpdateSourceTrigger=PropertyChanged}" Tag="모델 검색…" Padding="30,7,10,7"
+                                         behaviors:FocusBehavior.FocusWhenVisible="True" />
+                                <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconSearch}" Width="15" Height="15" HorizontalAlignment="Left" Margin="9,0,0,0"
+                                      Fill="{StaticResource MutedForegroundBrush}" IsHitTestVisible="False" />
                             </Grid>
-                        </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                </ComboBox>
-                <Button Command="{Binding RefreshModelsCommand}" Style="{StaticResource SubtleButtonStyle}"
-                        FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="13" Content="&#xE72C;"
-                        Padding="8,6" Margin="4,0,0,0" ToolTip="모델 목록 새로고침" />
+                            <ListBox Grid.Row="1" ItemsSource="{Binding ModelsView}" SelectedItem="{Binding SelectedModel}" Background="Transparent" BorderThickness="0"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                <ListBox.GroupStyle>
+                                    <GroupStyle>
+                                        <GroupStyle.HeaderTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding Name}" Foreground="{StaticResource MutedForegroundBrush}" FontSize="11" FontWeight="SemiBold" Margin="10,8,0,3" />
+                                            </DataTemplate>
+                                        </GroupStyle.HeaderTemplate>
+                                    </GroupStyle>
+                                </ListBox.GroupStyle>
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Name}" Foreground="{StaticResource ForegroundBrush}" FontSize="13" TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Text="{Binding Id}" Foreground="{StaticResource MutedForegroundBrush}" FontSize="10.5" TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Grid>
+                    </Border>
+                </Popup>
+
+                <Button Command="{Binding RefreshModelsCommand}" Style="{StaticResource SubtleButtonStyle}" Padding="8" Margin="2,0,0,0" ToolTip="모델 목록 새로고침">
+                    <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconRefresh}" Width="16" Height="16" />
+                </Button>
                 <TextBlock Text="불러오는 중…" Foreground="{StaticResource MutedForegroundBrush}" VerticalAlignment="Center" FontSize="11.5" Margin="6,0,0,0"
                            Visibility="{Binding IsModelLoading, Converter={StaticResource BoolToVis}}" />
             </StackPanel>
 
             <Button HorizontalAlignment="Right" Command="{Binding OpenSettingsCommand}" Style="{StaticResource SubtleButtonStyle}" Padding="10,6" ToolTip="설정">
                 <StackPanel Orientation="Horizontal">
-                    <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="13" Text="&#xE713;" VerticalAlignment="Center" />
-                    <TextBlock Text="설정" Margin="6,0,0,0" VerticalAlignment="Center" />
+                    <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconSettings}" Width="16" Height="16" />
+                    <TextBlock Text="설정" Margin="7,0,0,0" VerticalAlignment="Center" />
                 </StackPanel>
             </Button>
         </Grid>
@@ -82,14 +117,16 @@
 
                 <Button Grid.Row="0" Command="{Binding NewConversationCommand}" Style="{StaticResource AccentButtonStyle}" Margin="12,12,12,6" Padding="12,9">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="12" Text="&#xE710;" VerticalAlignment="Center" />
+                        <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconPlus}" Width="15" Height="15" />
                         <TextBlock Text="새 대화" Margin="7,0,0,0" VerticalAlignment="Center" />
                     </StackPanel>
                 </Button>
 
-                <TextBox Grid.Row="1" Margin="12,4,12,6" Padding="8,6"
-                         Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                         Tag="대화 검색…" FontSize="12.5" />
+                <Grid Grid.Row="1" Margin="12,4,12,6">
+                    <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Tag="대화 검색…" FontSize="12.5" Padding="30,6,8,6" />
+                    <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconSearch}" Width="14" Height="14" HorizontalAlignment="Left" Margin="9,0,0,0"
+                          Fill="{StaticResource MutedForegroundBrush}" IsHitTestVisible="False" />
+                </Grid>
 
                 <ListBox Grid.Row="2" Background="Transparent" BorderThickness="0"
                          ItemsSource="{Binding ConversationsView}" SelectedItem="{Binding SelectedConversation}"
@@ -105,38 +142,37 @@
                     </ListBox.GroupStyle>
                     <ListBox.ItemTemplate>
                         <DataTemplate DataType="{x:Type vm:ConversationViewModel}">
-                            <Grid x:Name="ConvRow">
+                            <Grid x:Name="ConvRow" Background="Transparent">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
 
-                                <!-- 표시 모드 -->
                                 <StackPanel x:Name="DisplayPanel" Grid.Column="0">
                                     <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="&#xE718;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="10"
-                                                   Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,5,0"
-                                                   Visibility="{Binding Pinned, Converter={StaticResource BoolToVis}}" />
+                                        <Path Data="{StaticResource IconPin}" Width="11" Height="11" Stretch="Uniform" Fill="{StaticResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,5,0"
+                                              Visibility="{Binding Pinned, Converter={StaticResource BoolToVis}}" />
                                         <TextBlock Text="{Binding Title}" Foreground="{StaticResource ForegroundBrush}" FontSize="13" TextTrimming="CharacterEllipsis" />
                                     </StackPanel>
                                     <TextBlock Text="{Binding Subtitle}" Foreground="{StaticResource MutedForegroundBrush}" FontSize="11" Margin="0,2,0,0" TextTrimming="CharacterEllipsis" />
                                 </StackPanel>
 
-                                <!-- 이름 변경 모드 -->
-                                <TextBox x:Name="RenamePanel" Grid.Column="0"
-                                         Text="{Binding RenameText, UpdateSourceTrigger=PropertyChanged}"
-                                         Visibility="Collapsed" Padding="6,4" FontSize="13"
-                                         behaviors:FocusBehavior.FocusWhenVisible="True"
-                                         KeyDown="RenameBox_KeyDown" LostFocus="RenameBox_LostFocus" />
+                                <TextBox x:Name="RenamePanel" Grid.Column="0" Text="{Binding RenameText, UpdateSourceTrigger=PropertyChanged}" Visibility="Collapsed" Padding="6,4" FontSize="13"
+                                         behaviors:FocusBehavior.FocusWhenVisible="True" KeyDown="RenameBox_KeyDown" LostFocus="RenameBox_LostFocus" />
 
-                                <!-- 호버 액션 -->
                                 <StackPanel x:Name="Actions" Grid.Column="1" Orientation="Horizontal" Visibility="Hidden">
                                     <Button Command="{Binding DataContext.PinConversationCommand, RelativeSource={RelativeSource AncestorType=ListBox}}" CommandParameter="{Binding}"
-                                            Style="{StaticResource SubtleButtonStyle}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="12" Content="&#xE718;" Padding="6" ToolTip="고정/해제" />
+                                            Style="{StaticResource SubtleButtonStyle}" Padding="6" ToolTip="고정/해제">
+                                        <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconPin}" Width="14" Height="14" />
+                                    </Button>
                                     <Button Command="{Binding DataContext.BeginRenameCommand, RelativeSource={RelativeSource AncestorType=ListBox}}" CommandParameter="{Binding}"
-                                            Style="{StaticResource SubtleButtonStyle}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="12" Content="&#xE70F;" Padding="6" ToolTip="이름 변경" />
+                                            Style="{StaticResource SubtleButtonStyle}" Padding="6" ToolTip="이름 변경">
+                                        <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconPencil}" Width="14" Height="14" />
+                                    </Button>
                                     <Button Command="{Binding DataContext.DeleteConversationCommand, RelativeSource={RelativeSource AncestorType=ListBox}}" CommandParameter="{Binding}"
-                                            Style="{StaticResource SubtleButtonStyle}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="12" Content="&#xE74D;" Padding="6" ToolTip="삭제" />
+                                            Style="{StaticResource SubtleButtonStyle}" Padding="6" ToolTip="삭제">
+                                        <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconDelete}" Width="14" Height="14" />
+                                    </Button>
                                 </StackPanel>
                             </Grid>
                             <DataTemplate.Triggers>
@@ -171,11 +207,21 @@
             <Grid Grid.Row="0" Margin="20,14,20,6">
                 <TextBlock Text="{Binding SelectedConversation.Title}" Foreground="{StaticResource ForegroundBrush}" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                    <Button Command="{Binding ToggleAdvancedCommand}" Style="{StaticResource SubtleButtonStyle}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Content="&#xE9E9;" Padding="8,6" ToolTip="시스템 프롬프트 · 파라미터" />
-                    <Button Command="{Binding RegenerateLastCommand}" Style="{StaticResource SubtleButtonStyle}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Content="&#xE72C;" Padding="8,6" ToolTip="마지막 응답 다시 생성" />
-                    <Button Command="{Binding CopyConversationCommand}" Style="{StaticResource SubtleButtonStyle}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Content="&#xE8C8;" Padding="8,6" ToolTip="대화 전체 복사" />
-                    <Button Command="{Binding ExportConversationCommand}" Style="{StaticResource SubtleButtonStyle}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Content="&#xE74E;" Padding="8,6" ToolTip="Markdown 으로 내보내기" />
-                    <Button Command="{Binding ClearMessagesCommand}" Style="{StaticResource SubtleButtonStyle}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Content="&#xE74D;" Padding="8,6" ToolTip="메시지 비우기" />
+                    <Button Command="{Binding ToggleAdvancedCommand}" Style="{StaticResource SubtleButtonStyle}" Padding="8" ToolTip="시스템 프롬프트 · 파라미터">
+                        <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconTune}" Width="17" Height="17" />
+                    </Button>
+                    <Button Command="{Binding RegenerateLastCommand}" Style="{StaticResource SubtleButtonStyle}" Padding="8" ToolTip="마지막 응답 다시 생성">
+                        <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconRefresh}" Width="17" Height="17" />
+                    </Button>
+                    <Button Command="{Binding CopyConversationCommand}" Style="{StaticResource SubtleButtonStyle}" Padding="8" ToolTip="대화 전체 복사">
+                        <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconCopy}" Width="17" Height="17" />
+                    </Button>
+                    <Button Command="{Binding ExportConversationCommand}" Style="{StaticResource SubtleButtonStyle}" Padding="8" ToolTip="Markdown 으로 내보내기">
+                        <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconExport}" Width="17" Height="17" />
+                    </Button>
+                    <Button Command="{Binding ClearMessagesCommand}" Style="{StaticResource SubtleButtonStyle}" Padding="8" ToolTip="메시지 비우기">
+                        <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconDelete}" Width="17" Height="17" />
+                    </Button>
                 </StackPanel>
             </Grid>
 
@@ -228,7 +274,7 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0" Text="&#xE7BA;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" Foreground="{StaticResource WarnBrush}" VerticalAlignment="Center" Margin="0,0,10,0" />
+                    <Path Grid.Column="0" Data="{StaticResource IconAlert}" Width="16" Height="16" Stretch="Uniform" Fill="{StaticResource WarnBrush}" VerticalAlignment="Center" Margin="0,0,10,0" />
                     <TextBlock Grid.Column="1" Text="{Binding StatusMessage}" Foreground="{StaticResource ForegroundBrush}" TextWrapping="Wrap" VerticalAlignment="Center" FontSize="12.5" />
                     <Button Grid.Column="2" Command="{Binding OpenSettingsCommand}" Style="{StaticResource SubtleButtonStyle}" Content="설정 열기" Margin="10,0,0,0"
                             Visibility="{Binding HasApiKey, Converter={StaticResource InverseBoolToVis}}" />
@@ -243,78 +289,90 @@
                         <ItemsControl.ItemTemplate>
                             <DataTemplate DataType="{x:Type vm:ChatMessageViewModel}">
                                 <Grid x:Name="MsgRow" Margin="0,7">
-                                    <Border x:Name="Bubble" HorizontalAlignment="Left" MaxWidth="860"
-                                            Background="{StaticResource AssistantBubbleBackgroundBrush}" BorderBrush="{StaticResource AssistantBubbleBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="14,10">
-                                        <StackPanel>
-                                            <!-- 첨부 이미지 -->
-                                            <ItemsControl ItemsSource="{Binding ImageSources}" Margin="0,0,0,8"
-                                                          Visibility="{Binding HasImages, Converter={StaticResource BoolToVis}}">
-                                                <ItemsControl.ItemsPanel>
-                                                    <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
-                                                </ItemsControl.ItemsPanel>
-                                                <ItemsControl.ItemTemplate>
-                                                    <DataTemplate>
-                                                        <Border CornerRadius="8" Margin="0,0,6,6" ClipToBounds="True" MaxHeight="240" MaxWidth="300"
-                                                                BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
-                                                            <Image Source="{Binding}" Stretch="Uniform" />
-                                                        </Border>
-                                                    </DataTemplate>
-                                                </ItemsControl.ItemTemplate>
-                                            </ItemsControl>
+                                    <StackPanel x:Name="Column" HorizontalAlignment="Left" MaxWidth="840">
+                                        <!-- 말풍선: 내용만 감싼다 -->
+                                        <Border x:Name="Bubble" Background="{StaticResource AssistantBubbleBackgroundBrush}" BorderBrush="{StaticResource AssistantBubbleBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="14,10" HorizontalAlignment="Left">
+                                            <StackPanel>
+                                                <!-- 첨부 이미지 -->
+                                                <ItemsControl ItemsSource="{Binding ImageSources}" Margin="0,0,0,8" Visibility="{Binding HasImages, Converter={StaticResource BoolToVis}}">
+                                                    <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Border CornerRadius="8" Margin="0,0,6,6" ClipToBounds="True" MaxHeight="240" MaxWidth="300" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                                                                <Image Source="{Binding}" Stretch="Uniform" />
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
 
-                                            <!-- 추론(Reasoning) 섹션 -->
-                                            <StackPanel x:Name="ReasoningBox" Visibility="Collapsed" Margin="0,0,0,8">
-                                                <Button Command="{Binding ToggleReasoningCommand}" Style="{StaticResource SubtleButtonStyle}" HorizontalAlignment="Left" Padding="6,3">
-                                                    <StackPanel Orientation="Horizontal">
-                                                        <TextBlock x:Name="ReasoningChevron" Text="&#xE76C;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="10" VerticalAlignment="Center" />
-                                                        <TextBlock Text="추론 과정" Margin="6,0,0,0" VerticalAlignment="Center" FontSize="12" />
+                                                <!-- 추론 섹션 -->
+                                                <StackPanel x:Name="ReasoningBox" Visibility="Collapsed" Margin="0,0,0,8">
+                                                    <Button Command="{Binding ToggleReasoningCommand}" Style="{StaticResource SubtleButtonStyle}" HorizontalAlignment="Left" Padding="6,3">
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <Path x:Name="ReasoningChevron" Style="{StaticResource IconStyle}" Data="{StaticResource IconChevronRight}" Width="12" Height="12" />
+                                                            <TextBlock Text="추론 과정" Margin="6,0,0,0" VerticalAlignment="Center" FontSize="12" />
+                                                        </StackPanel>
+                                                    </Button>
+                                                    <Border x:Name="ReasoningBody" Visibility="Collapsed" Background="{StaticResource CodeBlockBackgroundBrush}" CornerRadius="6" Padding="10,8" Margin="0,4,0,0">
+                                                        <TextBlock Text="{Binding Reasoning}" Foreground="{StaticResource SecondaryForegroundBrush}" TextWrapping="Wrap" FontSize="12.5" LineHeight="19" />
+                                                    </Border>
+                                                </StackPanel>
+
+                                                <!-- 편집 모드 -->
+                                                <StackPanel x:Name="EditPanel" Visibility="Collapsed">
+                                                    <TextBox Text="{Binding EditText, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="Wrap" MinWidth="360" MaxHeight="240" VerticalScrollBarVisibility="Auto" behaviors:FocusBehavior.FocusWhenVisible="True" />
+                                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
+                                                        <Button Content="취소" Command="{Binding CancelEditCommand}" Style="{StaticResource SubtleButtonStyle}" Padding="12,5" Margin="0,0,8,0" />
+                                                        <Button Content="저장 후 재생성" Style="{StaticResource AccentButtonStyle}" Padding="14,5"
+                                                                Command="{Binding DataContext.SubmitEditCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}" />
                                                     </StackPanel>
-                                                </Button>
-                                                <Border x:Name="ReasoningBody" Visibility="Collapsed" Background="{StaticResource CodeBlockBackgroundBrush}" CornerRadius="6" Padding="10,8" Margin="0,4,0,0">
-                                                    <TextBlock Text="{Binding Reasoning}" Foreground="{StaticResource SecondaryForegroundBrush}" TextWrapping="Wrap" FontSize="12.5" LineHeight="19" />
+                                                </StackPanel>
+
+                                                <!-- 본문 -->
+                                                <TextBlock x:Name="RawText" Text="{Binding Content}" Foreground="{StaticResource ForegroundBrush}" TextWrapping="Wrap" LineHeight="21"
+                                                           Visibility="{Binding ShowMarkdown, Converter={StaticResource InverseBoolToVis}}" />
+                                                <controls:MarkdownPresenter x:Name="Markdown" Markdown="{Binding Content}" Visibility="{Binding ShowMarkdown, Converter={StaticResource BoolToVis}}" />
+
+                                                <!-- 타이핑 대기 애니메이션 -->
+                                                <StackPanel x:Name="Typing" Orientation="Horizontal" Visibility="Collapsed" Margin="2,2,0,2">
+                                                    <Ellipse x:Name="Dot1" Width="7" Height="7" Margin="0,0,5,0" Fill="{StaticResource AccentBrush}" Opacity="0.35" />
+                                                    <Ellipse x:Name="Dot2" Width="7" Height="7" Margin="0,0,5,0" Fill="{StaticResource AccentBrush}" Opacity="0.35" />
+                                                    <Ellipse x:Name="Dot3" Width="7" Height="7" Fill="{StaticResource AccentBrush}" Opacity="0.35" />
+                                                </StackPanel>
+
+                                                <Border x:Name="AbortedChip" Visibility="Collapsed" HorizontalAlignment="Left" Margin="0,6,0,0" Padding="6,2" CornerRadius="4" Background="{StaticResource InlineCodeBackgroundBrush}">
+                                                    <TextBlock Text="중단됨" Foreground="{StaticResource MutedForegroundBrush}" FontSize="11" />
                                                 </Border>
                                             </StackPanel>
+                                        </Border>
 
-                                            <!-- 편집 모드 -->
-                                            <StackPanel x:Name="EditPanel" Visibility="Collapsed">
-                                                <TextBox Text="{Binding EditText, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="Wrap" MinWidth="360" MaxHeight="240" VerticalScrollBarVisibility="Auto"
-                                                         behaviors:FocusBehavior.FocusWhenVisible="True" />
-                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
-                                                    <Button Content="취소" Command="{Binding CancelEditCommand}" Style="{StaticResource SubtleButtonStyle}" Padding="12,5" Margin="0,0,8,0" />
-                                                    <Button Content="저장 후 재생성" Style="{StaticResource AccentButtonStyle}" Padding="14,5"
-                                                            Command="{Binding DataContext.SubmitEditCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}" />
-                                                </StackPanel>
-                                            </StackPanel>
-
-                                            <!-- 본문 -->
-                                            <TextBlock x:Name="RawText" Text="{Binding Content}" Foreground="{StaticResource ForegroundBrush}" TextWrapping="Wrap" LineHeight="21"
-                                                       Visibility="{Binding ShowMarkdown, Converter={StaticResource InverseBoolToVis}}" />
-                                            <controls:MarkdownPresenter x:Name="Markdown" Markdown="{Binding Content}" Visibility="{Binding ShowMarkdown, Converter={StaticResource BoolToVis}}" />
-
-                                            <!-- 상태/타이핑 -->
-                                            <TextBlock x:Name="Typing" Text="●  ●  ●" Foreground="{StaticResource AccentBrush}" FontSize="10" Margin="0,2,0,0" Visibility="Collapsed" />
-                                            <Border x:Name="AbortedChip" Visibility="Collapsed" HorizontalAlignment="Left" Margin="0,6,0,0" Padding="6,2" CornerRadius="4" Background="{StaticResource InlineCodeBackgroundBrush}">
-                                                <TextBlock Text="중단됨" Foreground="{StaticResource MutedForegroundBrush}" FontSize="11" />
-                                            </Border>
-
-                                            <!-- 액션 바 -->
-                                            <StackPanel x:Name="MsgActions" Orientation="Horizontal" Margin="0,6,0,0" Visibility="Hidden">
-                                                <Button Command="{Binding CopyCommand}" Style="{StaticResource SubtleButtonStyle}" Content="복사" FontSize="11.5" Padding="7,2" />
-                                                <Button x:Name="EditBtn" Command="{Binding BeginEditCommand}" Style="{StaticResource SubtleButtonStyle}" Content="편집" FontSize="11.5" Padding="7,2" Visibility="Collapsed" />
-                                                <Button x:Name="RegenBtn" Command="{Binding DataContext.RegenerateMessageCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"
-                                                        Style="{StaticResource SubtleButtonStyle}" Content="다시 생성" FontSize="11.5" Padding="7,2" Visibility="Collapsed" />
-                                                <Button Command="{Binding DataContext.DeleteMessageCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"
-                                                        Style="{StaticResource SubtleButtonStyle}" Content="삭제" FontSize="11.5" Padding="7,2" />
-                                                <TextBlock Text="{Binding TimestampText}" Foreground="{StaticResource MutedForegroundBrush}" FontSize="11" VerticalAlignment="Center" Margin="6,0,0,0" />
-                                            </StackPanel>
+                                        <!-- 액션바: 말풍선 밖 하단 -->
+                                        <StackPanel x:Name="MsgActions" Orientation="Horizontal" Margin="4,4,4,0" HorizontalAlignment="Left" Visibility="Hidden">
+                                            <Button Command="{Binding CopyCommand}" Style="{StaticResource SubtleButtonStyle}" Padding="6,3" ToolTip="복사">
+                                                <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconCopy}" Width="14" Height="14" />
+                                            </Button>
+                                            <Button x:Name="EditBtn" Command="{Binding BeginEditCommand}" Style="{StaticResource SubtleButtonStyle}" Padding="6,3" Visibility="Collapsed" ToolTip="편집 후 재생성">
+                                                <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconPencil}" Width="14" Height="14" />
+                                            </Button>
+                                            <Button x:Name="RegenBtn" Command="{Binding DataContext.RegenerateMessageCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"
+                                                    Style="{StaticResource SubtleButtonStyle}" Padding="6,3" Visibility="Collapsed" ToolTip="다시 생성">
+                                                <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconRefresh}" Width="14" Height="14" />
+                                            </Button>
+                                            <Button Command="{Binding DataContext.DeleteMessageCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"
+                                                    Style="{StaticResource SubtleButtonStyle}" Padding="6,3" ToolTip="삭제">
+                                                <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconDelete}" Width="14" Height="14" />
+                                            </Button>
+                                            <TextBlock Text="{Binding TimestampText}" Foreground="{StaticResource MutedForegroundBrush}" FontSize="11" VerticalAlignment="Center" Margin="6,0,0,0" />
                                         </StackPanel>
-                                    </Border>
+                                    </StackPanel>
                                 </Grid>
                                 <DataTemplate.Triggers>
                                     <DataTrigger Binding="{Binding IsUser}" Value="True">
+                                        <Setter TargetName="Column" Property="HorizontalAlignment" Value="Right" />
                                         <Setter TargetName="Bubble" Property="HorizontalAlignment" Value="Right" />
                                         <Setter TargetName="Bubble" Property="Background" Value="{StaticResource UserBubbleBackgroundBrush}" />
                                         <Setter TargetName="Bubble" Property="BorderBrush" Value="{StaticResource UserBubbleBorderBrush}" />
+                                        <Setter TargetName="MsgActions" Property="HorizontalAlignment" Value="Right" />
                                         <Setter TargetName="EditBtn" Property="Visibility" Value="Visible" />
                                     </DataTrigger>
                                     <DataTrigger Binding="{Binding IsAssistant}" Value="True">
@@ -325,7 +383,7 @@
                                     </DataTrigger>
                                     <DataTrigger Binding="{Binding IsReasoningExpanded}" Value="True">
                                         <Setter TargetName="ReasoningBody" Property="Visibility" Value="Visible" />
-                                        <Setter TargetName="ReasoningChevron" Property="Text" Value="&#xE70D;" />
+                                        <Setter TargetName="ReasoningChevron" Property="Data" Value="{StaticResource IconChevronDown}" />
                                     </DataTrigger>
                                     <DataTrigger Binding="{Binding HasError}" Value="True">
                                         <Setter TargetName="RawText" Property="Foreground" Value="{StaticResource ErrorBrush}" />
@@ -334,8 +392,20 @@
                                     <DataTrigger Binding="{Binding Aborted}" Value="True">
                                         <Setter TargetName="AbortedChip" Property="Visibility" Value="Visible" />
                                     </DataTrigger>
-                                    <DataTrigger Binding="{Binding IsStreaming}" Value="True">
+                                    <DataTrigger Binding="{Binding IsWaiting}" Value="True">
                                         <Setter TargetName="Typing" Property="Visibility" Value="Visible" />
+                                        <DataTrigger.EnterActions>
+                                            <BeginStoryboard x:Name="TypingSb">
+                                                <Storyboard RepeatBehavior="Forever">
+                                                    <DoubleAnimation Storyboard.TargetName="Dot1" Storyboard.TargetProperty="Opacity" From="0.35" To="1" Duration="0:0:0.45" AutoReverse="True" />
+                                                    <DoubleAnimation Storyboard.TargetName="Dot2" Storyboard.TargetProperty="Opacity" From="0.35" To="1" BeginTime="0:0:0.15" Duration="0:0:0.45" AutoReverse="True" />
+                                                    <DoubleAnimation Storyboard.TargetName="Dot3" Storyboard.TargetProperty="Opacity" From="0.35" To="1" BeginTime="0:0:0.3" Duration="0:0:0.45" AutoReverse="True" />
+                                                </Storyboard>
+                                            </BeginStoryboard>
+                                        </DataTrigger.EnterActions>
+                                        <DataTrigger.ExitActions>
+                                            <StopStoryboard BeginStoryboardName="TypingSb" />
+                                        </DataTrigger.ExitActions>
                                     </DataTrigger>
                                     <DataTrigger Binding="{Binding IsEditing}" Value="True">
                                         <Setter TargetName="EditPanel" Property="Visibility" Value="Visible" />
@@ -355,102 +425,88 @@
                 <!-- 빈 상태 -->
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="560"
                             Visibility="{Binding SelectedConversation.IsEmpty, Converter={StaticResource BoolToVis}}">
-                    <Border Width="56" Height="56" CornerRadius="14" Background="{StaticResource AccentBrush}" HorizontalAlignment="Center">
-                        <TextBlock Text="N" Foreground="{StaticResource AccentForegroundBrush}" FontWeight="Bold" FontSize="30" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                    </Border>
+                    <Image Source="pack://application:,,,/NvChat;component/Resources/brand.png" Width="60" Height="60" HorizontalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality" />
                     <TextBlock Text="무엇이든 물어보세요" Foreground="{StaticResource ForegroundBrush}" FontSize="17" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,16,0,4" />
                     <TextBlock Text="NVIDIA 의 무료 LLM 으로 대화를 시작합니다." Foreground="{StaticResource MutedForegroundBrush}" FontSize="12.5" HorizontalAlignment="Center" Margin="0,0,0,18" />
                     <ItemsControl ItemsSource="{Binding ExamplePrompts}" HorizontalAlignment="Center">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <WrapPanel HorizontalAlignment="Center" />
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel HorizontalAlignment="Center" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Button Content="{Binding}" Margin="5"
-                                        Command="{Binding DataContext.UseExamplePromptCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}" />
+                                <Button Content="{Binding}" Margin="5" Command="{Binding DataContext.UseExamplePromptCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}" />
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                 </StackPanel>
 
-                <!-- 맨 아래로 스크롤 -->
-                <Button x:Name="ScrollToBottomButton" Click="ScrollToBottomButton_Click" Visibility="Collapsed"
-                        HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,22,10" Width="36" Height="36"
-                        Background="{StaticResource CardBackgroundBrush}" BorderBrush="{StaticResource BorderStrongBrush}" ToolTip="맨 아래로"
-                        FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="13" Content="&#xE74B;">
-                    <Button.Style>
-                        <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="Button">
-                                        <Border x:Name="Bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" CornerRadius="18">
-                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                        </Border>
-                                        <ControlTemplate.Triggers>
-                                            <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource ControlHoverBackgroundBrush}" />
-                                            </Trigger>
-                                        </ControlTemplate.Triggers>
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
-                        </Style>
-                    </Button.Style>
+                <!-- 맨 아래로 -->
+                <Button x:Name="ScrollToBottomButton" Click="ScrollToBottomButton_Click" Visibility="Collapsed" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,22,10" Width="36" Height="36"
+                        Background="{StaticResource CardBackgroundBrush}" BorderBrush="{StaticResource BorderStrongBrush}" Foreground="{StaticResource ForegroundBrush}" ToolTip="맨 아래로">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="Bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" CornerRadius="18">
+                                <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconArrowDown}" Width="18" Height="18" />
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Bd" Property="Background" Value="{StaticResource ControlHoverBackgroundBrush}" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
                 </Button>
             </Grid>
 
-            <!-- 입력 -->
-            <Border Grid.Row="4" Margin="20,6,20,16" Padding="6" Background="{StaticResource ControlBackgroundBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="14">
+            <!-- ===== 입력 (Claude 식: 상단 텍스트 + 하단 툴바) ===== -->
+            <Border Grid.Row="4" Margin="20,6,20,16" Padding="10,8" Background="{StaticResource ControlBackgroundBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="14">
                 <StackPanel>
+                    <TextBox x:Name="InputBox" Text="{Binding InputText, UpdateSourceTrigger=PropertyChanged}"
+                             Tag="메시지를 입력하세요…   (Enter 전송 · Shift+Enter 줄바꿈)" Background="Transparent" BorderThickness="0" Padding="2,2,2,4"
+                             AcceptsReturn="True" TextWrapping="Wrap" MaxHeight="220" VerticalScrollBarVisibility="Auto" PreviewKeyDown="InputBox_PreviewKeyDown" />
+
                     <!-- 첨부 미리보기 -->
-                    <ItemsControl ItemsSource="{Binding Attachments}" Margin="6,4,6,2"
-                                  Visibility="{Binding HasAttachments, Converter={StaticResource BoolToVis}}">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
+                    <ItemsControl ItemsSource="{Binding Attachments}" Margin="0,4,0,2" Visibility="{Binding HasAttachments, Converter={StaticResource BoolToVis}}">
+                        <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Grid Margin="0,0,6,4" Width="64" Height="64">
+                                <Grid Margin="0,0,6,4" Width="60" Height="60">
                                     <Border CornerRadius="6" ClipToBounds="True" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
                                         <Image Source="{Binding Preview}" Stretch="UniformToFill" />
                                     </Border>
                                     <Button Command="{Binding DataContext.RemoveAttachmentCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"
-                                            Style="{StaticResource SubtleButtonStyle}" Content="✕" FontSize="10" Foreground="White" Background="#B0000000"
-                                            Width="18" Height="18" Padding="0" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,-6,-6,0" ToolTip="제거" />
+                                            Style="{StaticResource SubtleButtonStyle}" Foreground="White" Background="#B0000000" Width="18" Height="18" Padding="0"
+                                            HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,-6,-6,0" ToolTip="제거">
+                                        <Path Data="{StaticResource IconClose}" Width="10" Height="10" Stretch="Uniform" Fill="White" />
+                                    </Button>
                                 </Grid>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
 
-                    <!-- 입력 행 -->
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
+                    <!-- 툴바 행 -->
+                    <Grid Margin="0,2,0,0">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                            <Button Command="{Binding AttachImageCommand}" Style="{StaticResource SubtleButtonStyle}" Padding="7" ToolTip="이미지 첨부 (비전 모델)">
+                                <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconAttach}" Width="19" Height="19" />
+                            </Button>
+                            <Button x:Name="PresetButton" Click="PresetButton_Click" Style="{StaticResource SubtleButtonStyle}" Padding="8,6" ToolTip="프롬프트 프리셋">
+                                <StackPanel Orientation="Horizontal">
+                                    <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconTune}" Width="15" Height="15" />
+                                    <TextBlock Text="프리셋" Margin="6,0,0,0" VerticalAlignment="Center" FontSize="12.5" />
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
 
-                        <Button Grid.Column="0" Command="{Binding AttachImageCommand}" Style="{StaticResource SubtleButtonStyle}"
-                                FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="16" Content="&#xE723;" Padding="8"
-                                VerticalAlignment="Bottom" ToolTip="이미지 첨부 (비전 모델 선택 필요)" />
-
-                        <TextBox Grid.Column="1" x:Name="InputBox" Text="{Binding InputText, UpdateSourceTrigger=PropertyChanged}"
-                                 Tag="메시지를 입력하세요…   (Enter 전송 · Shift+Enter 줄바꿈)" Background="Transparent" BorderThickness="0"
-                                 AcceptsReturn="True" TextWrapping="Wrap" MaxHeight="200" VerticalScrollBarVisibility="Auto" VerticalAlignment="Center" PreviewKeyDown="InputBox_PreviewKeyDown" />
-
-                        <Button Grid.Column="2" Command="{Binding SendCommand}" Style="{StaticResource AccentButtonStyle}" Margin="6,0,2,0" Padding="16,8" VerticalAlignment="Bottom"
-                                Visibility="{Binding IsSelectedStreaming, Converter={StaticResource InverseBoolToVis}}">
+                        <Button HorizontalAlignment="Right" Command="{Binding SendCommand}" Style="{StaticResource AccentButtonStyle}" Padding="14,7"
+                                Visibility="{Binding IsSelectedStreaming, Converter={StaticResource InverseBoolToVis}}" ToolTip="전송">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="전송" VerticalAlignment="Center" />
-                                <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="12" Text="&#xE725;" Margin="7,0,0,0" VerticalAlignment="Center" />
+                                <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconSend}" Width="15" Height="15" Margin="7,0,0,0" />
                             </StackPanel>
                         </Button>
-                        <Button Grid.Column="2" Command="{Binding StopCommand}" Style="{StaticResource {x:Type Button}}" Margin="6,0,2,0" Padding="16,8" VerticalAlignment="Bottom"
-                                Visibility="{Binding IsSelectedStreaming, Converter={StaticResource BoolToVis}}">
+                        <Button HorizontalAlignment="Right" Command="{Binding StopCommand}" Style="{StaticResource {x:Type Button}}" Padding="14,7"
+                                Visibility="{Binding IsSelectedStreaming, Converter={StaticResource BoolToVis}}" ToolTip="중단">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="12" Text="&#xE71A;" VerticalAlignment="Center" Foreground="{StaticResource ErrorBrush}" />
+                                <Path Data="{StaticResource IconStop}" Width="14" Height="14" Stretch="Uniform" Fill="{StaticResource ErrorBrush}" VerticalAlignment="Center" />
                                 <TextBlock Text="중단" Margin="7,0,0,0" VerticalAlignment="Center" />
                             </StackPanel>
                         </Button>

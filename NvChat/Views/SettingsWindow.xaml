@@ -86,6 +86,52 @@
                 <CheckBox Content="Enter 키로 전송 (끄면 Ctrl+Enter 로 전송, Enter 는 줄바꿈)" IsChecked="{Binding SendOnEnter}" Margin="0,0,0,10" />
                 <CheckBox Content="첫 응답 후 대화 제목 자동 생성" IsChecked="{Binding GenerateTitles}" />
 
+                <Border Height="1" Background="{StaticResource BorderBrush}" Margin="0,20,0,16" />
+
+                <!-- 커스텀 지침 -->
+                <TextBlock Text="커스텀 지침 (모든 대화에 자동 적용)" Foreground="{StaticResource ForegroundBrush}" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,8" />
+                <TextBlock Text="나에 대한 정보" Foreground="{StaticResource SecondaryForegroundBrush}" FontSize="12" Margin="0,0,0,4" />
+                <TextBox Text="{Binding AboutYou, UpdateSourceTrigger=PropertyChanged}" Tag="예: 저는 한국어를 쓰는 개발자입니다. 답변은 한국어로." AcceptsReturn="True" TextWrapping="Wrap" MinHeight="52" MaxHeight="110" VerticalScrollBarVisibility="Auto" />
+                <TextBlock Text="응답 방식" Foreground="{StaticResource SecondaryForegroundBrush}" FontSize="12" Margin="0,10,0,4" />
+                <TextBox Text="{Binding ResponseStyle, UpdateSourceTrigger=PropertyChanged}" Tag="예: 간결하게, 예시 코드 포함, 불필요한 사족 없이." AcceptsReturn="True" TextWrapping="Wrap" MinHeight="52" MaxHeight="110" VerticalScrollBarVisibility="Auto" />
+
+                <Border Height="1" Background="{StaticResource BorderBrush}" Margin="0,20,0,16" />
+
+                <!-- 프롬프트 프리셋 -->
+                <Grid Margin="0,0,0,8">
+                    <TextBlock Text="프롬프트 프리셋" Foreground="{StaticResource ForegroundBrush}" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    <Button HorizontalAlignment="Right" Command="{Binding AddPresetCommand}" Style="{StaticResource SubtleButtonStyle}" Content="+ 추가" FontSize="12.5" />
+                </Grid>
+                <ItemsControl ItemsSource="{Binding Presets}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="150" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBox Grid.Column="0" Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Tag="이름" Margin="0,0,6,0" VerticalAlignment="Top" />
+                                <TextBox Grid.Column="1" Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" Tag="프롬프트 본문" AcceptsReturn="True" TextWrapping="Wrap" MaxHeight="90" VerticalScrollBarVisibility="Auto" />
+                                <Button Grid.Column="2" Command="{Binding DataContext.RemovePresetCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"
+                                        Style="{StaticResource SubtleButtonStyle}" Padding="7" Margin="4,0,0,0" VerticalAlignment="Top" ToolTip="삭제">
+                                    <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconDelete}" Width="14" Height="14" />
+                                </Button>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <Border Height="1" Background="{StaticResource BorderBrush}" Margin="0,20,0,16" />
+
+                <!-- 데스크톱 런처 -->
+                <TextBlock Text="데스크톱 런처" Foreground="{StaticResource ForegroundBrush}" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,10" />
+                <Grid Margin="0,0,0,12">
+                    <TextBlock Text="빠른 채팅 전역 단축키" Foreground="{StaticResource SecondaryForegroundBrush}" FontSize="12.5" VerticalAlignment="Center" />
+                    <ComboBox HorizontalAlignment="Right" Width="180" ItemsSource="{Binding HotkeyOptions}" SelectedItem="{Binding GlobalHotkey}" />
+                </Grid>
+                <CheckBox Content="닫기(X) 버튼을 누르면 종료하지 않고 트레이로 최소화" IsChecked="{Binding MinimizeToTrayOnClose}" />
+
                 <!-- 기본 파라미터 -->
                 <TextBlock Text="새 대화 기본 파라미터" Foreground="{StaticResource ForegroundBrush}" FontSize="14" FontWeight="SemiBold" Margin="0,18,0,10" />
 

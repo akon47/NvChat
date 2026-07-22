@@ -13,25 +13,49 @@ namespace NvChat
     /// </summary>
     public partial class App : Application
     {
+        #region Fields
+
+        private MainViewModel _viewModel;
+        private MainWindow _mainWindow;
+        private QuickChatWindow _quickWindow;
+        private TrayService _tray;
+        private HotKeyService _hotKey;
+
+        #endregion
+
+
         #region Overrides
 
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
 
-            // 디스패처 루프 밖(시작 경로)과 비-UI 스레드의 예외까지 포착.
+            // 창을 닫아도(트레이로 최소화) 앱이 계속 살아있도록 명시적 종료 모드.
+            ShutdownMode = ShutdownMode.OnExplicitShutdown;
+
             AppDomain.CurrentDomain.UnhandledException += OnDomainUnhandledException;
             DispatcherUnhandledException += OnDispatcherUnhandledException;
 
             try
             {
-                var viewModel = new MainViewModel();
-                var window = new MainWindow { DataContext = viewModel };
+                _viewModel = new MainViewModel();
+                _viewModel.SettingsChanged += (_, __) => RegisterHotKey();
 
-                window.Loaded += async (_, __) => await viewModel.LoadAsync();
+                _mainWindow = new MainWindow { DataContext = _viewModel };
+                _mainWindow.Loaded += async (_, __) => await _viewModel.LoadAsync();
+                MainWindow = _mainWindow;
 
-                MainWindow = window;
-                window.Show();
+                _tray = new TrayService();
+                _tray.OpenRequested += ShowMain;
+                _tray.QuickChatRequested += ShowQuick;
+                _tray.NewChatRequested += OnTrayNewChat;
+                _tray.ExitRequested += RequestExit;
+
+                _hotKey = new HotKeyService();
+                _hotKey.HotKeyPressed += ToggleQuick;
+                RegisterHotKey();
+
+                _mainWindow.Show();
             }
             catch (Exception ex)
             {
@@ -44,14 +68,88 @@ namespace NvChat
         #endregion
 
 
-        #region Helpers
+        #region Launcher
+
+        public void ShowMain()
+        {
+            if (_mainWindow == null)
+                return;
+
+            if (_mainWindow.IsVisible == false)
+                _mainWindow.Show();
+
+            if (_mainWindow.WindowState == WindowState.Minimized)
+                _mainWindow.WindowState = WindowState.Normal;
+
+            _mainWindow.Activate();
+            _mainWindow.Topmost = true;
+            _mainWindow.Topmost = false;
+        }
+
+        private void ShowQuick()
+        {
+            if (_quickWindow == null)
+            {
+                _quickWindow = new QuickChatWindow { DataContext = _viewModel };
+                _quickWindow.OpenMainRequested += (_, __) => ShowMain();
+            }
+
+            _quickWindow.ShowAndActivate();
+        }
+
+        private void ToggleQuick()
+        {
+            if (_quickWindow != null && _quickWindow.IsVisible)
+                _quickWindow.Hide();
+            else
+                ShowQuick();
+        }
+
+        private void OnTrayNewChat()
+        {
+            if (_viewModel?.NewConversationCommand?.CanExecute(null) == true)
+                _viewModel.NewConversationCommand.Execute(null);
+
+            ShowMain();
+        }
+
+        private void RegisterHotKey()
+        {
+            var hotkey = _viewModel?.GetCurrentSettings()?.GlobalHotkey;
+            _hotKey?.Register(hotkey);
+        }
+
+        /// <summary>트레이 '종료' 등에서 호출되는 실제 앱 종료.</summary>
+        public void RequestExit()
+        {
+            try
+            {
+                _viewModel?.SaveState();
+            }
+            catch
+            {
+            }
+
+            _hotKey?.Dispose();
+            _tray?.Dispose();
+
+            if (_mainWindow != null)
+                _mainWindow.AllowClose = true;
+
+            _quickWindow?.CloseForReal();
+
+            Shutdown();
+        }
+
+        #endregion
+
+
+        #region Error handling
 
         private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
         {
             Log("dispatcher", e.Exception);
             MessageBox.Show(Describe(e.Exception), "NvChat 오류", MessageBoxButton.OK, MessageBoxImage.Error);
-
-            // 개별 UI 예외로 앱 전체가 죽지 않도록 처리 완료로 표시.
             e.Handled = true;
         }
 
@@ -77,12 +175,10 @@ namespace NvChat
             try
             {
                 Directory.CreateDirectory(AppPaths.DataDirectory);
-                var line = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] ({source}) {ex}\n\n";
-                File.AppendAllText(Path.Combine(AppPaths.DataDirectory, "error.log"), line);
+                File.AppendAllText(Path.Combine(AppPaths.DataDirectory, "error.log"), $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] ({source}) {ex}\n\n");
             }
             catch
             {
-                // 로깅 실패는 무시.
             }
         }
 

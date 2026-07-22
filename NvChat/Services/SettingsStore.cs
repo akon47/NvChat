@@ -59,6 +59,9 @@ namespace NvChat.Services
             if (settings.DefaultParameters == null)
                 settings.DefaultParameters = new GenerationParameters();
 
+            if (settings.Presets == null)
+                settings.Presets = AppSettings.DefaultPresets();
+
             return settings;
         }
 
@@ -82,6 +85,11 @@ namespace NvChat.Services
                 DefaultParameters = settings.DefaultParameters,
                 SendOnEnter = settings.SendOnEnter,
                 GenerateTitles = settings.GenerateTitles,
+                AboutYou = settings.AboutYou,
+                ResponseStyle = settings.ResponseStyle,
+                Presets = settings.Presets,
+                GlobalHotkey = settings.GlobalHotkey,
+                MinimizeToTrayOnClose = settings.MinimizeToTrayOnClose,
                 WindowLeft = settings.WindowLeft,
                 WindowTop = settings.WindowTop,
                 WindowWidth = settings.WindowWidth,

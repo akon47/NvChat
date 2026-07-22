@@ -52,6 +52,9 @@ namespace NvChat.ViewModels
 
         public bool HasReasoning => string.IsNullOrWhiteSpace(_reasoning) == false;
 
+        /// <summary>스트리밍이 시작됐지만 아직 본문/추론이 하나도 안 온 대기 상태(타이핑 애니메이션용).</summary>
+        public bool IsWaiting => _isStreaming && string.IsNullOrEmpty(_content) && string.IsNullOrEmpty(_reasoning);
+
         public string TimestampText => _timestamp.ToString("HH:mm");
 
         public bool HasImages => _images != null && _images.Count > 0;
@@ -80,7 +83,11 @@ namespace NvChat.ViewModels
         public string Content
         {
             get => _content;
-            set => SetProperty(ref _content, value);
+            set
+            {
+                if (SetProperty(ref _content, value))
+                    RaisePropertyChanged(nameof(IsWaiting));
+            }
         }
 
 
@@ -93,7 +100,10 @@ namespace NvChat.ViewModels
             set
             {
                 if (SetProperty(ref _reasoning, value))
+                {
                     RaisePropertyChanged(nameof(HasReasoning));
+                    RaisePropertyChanged(nameof(IsWaiting));
+                }
             }
         }
 
