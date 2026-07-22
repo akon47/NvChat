@@ -140,6 +140,7 @@ namespace NvChat.ViewModels
                 {
                     SyncSelectedModelToConversation();
                     RaisePropertyChanged(nameof(IsSelectedStreaming));
+                    RaisePropertyChanged(nameof(IsSendBlockedByOtherConversation));
                     RaiseCommandStates();
                 }
             }
@@ -236,6 +237,8 @@ namespace NvChat.ViewModels
                 {
                     RaisePropertyChanged(nameof(IsNotStreaming));
                     RaisePropertyChanged(nameof(IsSelectedStreaming));
+                    RaisePropertyChanged(nameof(IsSendBlockedByOtherConversation));
+                    RaisePropertyChanged(nameof(StreamingConversationTitle));
                     RaiseCommandStates();
                 }
             }
@@ -245,6 +248,12 @@ namespace NvChat.ViewModels
 
         /// <summary>현재 선택한 대화가 스트리밍 중인지. (입력창의 전송/중단 전환에 사용)</summary>
         public bool IsSelectedStreaming => _isStreaming && ReferenceEquals(_streamingConversation, _selectedConversation);
+
+        /// <summary>다른 대화가 응답 생성 중이라 지금 대화에서 전송이 막혀 있는지.</summary>
+        public bool IsSendBlockedByOtherConversation => _isStreaming && ReferenceEquals(_streamingConversation, _selectedConversation) == false;
+
+        /// <summary>응답을 생성 중인 대화의 제목(안내 문구용).</summary>
+        public string StreamingConversationTitle => _streamingConversation?.Title;
 
 
         private bool _isModelLoading;
@@ -905,6 +914,7 @@ namespace NvChat.ViewModels
 
             _streamCts = new CancellationTokenSource();
             _streamingConversation = conversation;
+            conversation.IsStreaming = true;
             IsStreaming = true;
             StatusMessage = null;
 
@@ -955,6 +965,7 @@ namespace NvChat.ViewModels
                 assistant.IsStreaming = false;
                 assistant.Timestamp = DateTime.Now;
 
+                conversation.IsStreaming = false;
                 _streamingConversation = null;
                 IsStreaming = false;
                 _streamCts?.Dispose();

@@ -144,6 +144,16 @@ namespace NvChat.ViewModels
         }
 
 
+        private bool _isStreaming;
+
+        /// <summary>이 대화에서 응답을 생성 중인지(사이드바 로딩 표시용).</summary>
+        public bool IsStreaming
+        {
+            get => _isStreaming;
+            set => SetProperty(ref _isStreaming, value);
+        }
+
+
         private bool _isRenaming;
 
         public bool IsRenaming

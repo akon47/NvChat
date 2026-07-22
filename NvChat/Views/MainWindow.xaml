@@ -40,8 +40,8 @@
                     </StackPanel>
                 </Button>
 
-                <Popup IsOpen="{Binding IsModelPickerOpen, Mode=TwoWay}" PlacementTarget="{Binding ElementName=ModelPickerButton}" Placement="Bottom"
-                       StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade" Focusable="False">
+                <Popup x:Name="ModelPickerPopup" IsOpen="{Binding IsModelPickerOpen, Mode=TwoWay}" PlacementTarget="{Binding ElementName=ModelPickerButton}" Placement="Bottom"
+                       StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade" Focusable="True" Opened="ModelPickerPopup_Opened">
                     <Border Background="{StaticResource CardBackgroundBrush}" BorderBrush="{StaticResource BorderStrongBrush}" BorderThickness="1" CornerRadius="10"
                             Width="440" MaxHeight="500" Margin="0,4,0,0" SnapsToDevicePixels="True">
                         <Border.Effect>
@@ -53,8 +53,7 @@
                                 <RowDefinition Height="*" />
                             </Grid.RowDefinitions>
                             <Grid Grid.Row="0" Margin="0,0,0,6">
-                                <TextBox Text="{Binding ModelSearchText, UpdateSourceTrigger=PropertyChanged}" Tag="모델 검색…" Padding="30,7,10,7"
-                                         behaviors:FocusBehavior.FocusWhenVisible="True" />
+                                <TextBox x:Name="ModelSearchBox" Text="{Binding ModelSearchText, UpdateSourceTrigger=PropertyChanged}" Tag="모델 검색…" Padding="30,7,10,7" />
                                 <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconSearch}" Width="15" Height="15" HorizontalAlignment="Left" Margin="9,0,0,0"
                                       Fill="{StaticResource MutedForegroundBrush}" IsHitTestVisible="False" />
                             </Grid>
@@ -154,7 +153,16 @@
                                               Visibility="{Binding Pinned, Converter={StaticResource BoolToVis}}" />
                                         <TextBlock Text="{Binding Title}" Foreground="{StaticResource ForegroundBrush}" FontSize="13" TextTrimming="CharacterEllipsis" />
                                     </StackPanel>
-                                    <TextBlock Text="{Binding Subtitle}" Foreground="{StaticResource MutedForegroundBrush}" FontSize="11" Margin="0,2,0,0" TextTrimming="CharacterEllipsis" />
+                                    <Grid Margin="0,2,0,0">
+                                        <TextBlock x:Name="ConvSubtitle" Text="{Binding Subtitle}" Foreground="{StaticResource MutedForegroundBrush}" FontSize="11" TextTrimming="CharacterEllipsis" />
+                                        <!-- 응답 생성 중 표시 -->
+                                        <StackPanel x:Name="ConvBusy" Orientation="Horizontal" Visibility="Collapsed">
+                                            <Ellipse x:Name="BDot1" Width="5" Height="5" Margin="0,0,4,0" VerticalAlignment="Center" Fill="{StaticResource AccentBrush}" Opacity="0.35" />
+                                            <Ellipse x:Name="BDot2" Width="5" Height="5" Margin="0,0,4,0" VerticalAlignment="Center" Fill="{StaticResource AccentBrush}" Opacity="0.35" />
+                                            <Ellipse x:Name="BDot3" Width="5" Height="5" Margin="0,0,6,0" VerticalAlignment="Center" Fill="{StaticResource AccentBrush}" Opacity="0.35" />
+                                            <TextBlock Text="응답 생성 중" Foreground="{StaticResource AccentBrush}" FontSize="11" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Grid>
                                 </StackPanel>
 
                                 <TextBox x:Name="RenamePanel" Grid.Column="0" Text="{Binding RenameText, UpdateSourceTrigger=PropertyChanged}" Visibility="Collapsed" Padding="6,4" FontSize="13"
@@ -179,6 +187,22 @@
                                 <Trigger SourceName="ConvRow" Property="IsMouseOver" Value="True">
                                     <Setter TargetName="Actions" Property="Visibility" Value="Visible" />
                                 </Trigger>
+                                <DataTrigger Binding="{Binding IsStreaming}" Value="True">
+                                    <Setter TargetName="ConvSubtitle" Property="Visibility" Value="Collapsed" />
+                                    <Setter TargetName="ConvBusy" Property="Visibility" Value="Visible" />
+                                    <DataTrigger.EnterActions>
+                                        <BeginStoryboard x:Name="ConvBusySb">
+                                            <Storyboard RepeatBehavior="Forever">
+                                                <DoubleAnimation Storyboard.TargetName="BDot1" Storyboard.TargetProperty="Opacity" From="0.35" To="1" Duration="0:0:0.45" AutoReverse="True" />
+                                                <DoubleAnimation Storyboard.TargetName="BDot2" Storyboard.TargetProperty="Opacity" From="0.35" To="1" BeginTime="0:0:0.15" Duration="0:0:0.45" AutoReverse="True" />
+                                                <DoubleAnimation Storyboard.TargetName="BDot3" Storyboard.TargetProperty="Opacity" From="0.35" To="1" BeginTime="0:0:0.3" Duration="0:0:0.45" AutoReverse="True" />
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </DataTrigger.EnterActions>
+                                    <DataTrigger.ExitActions>
+                                        <StopStoryboard BeginStoryboardName="ConvBusySb" />
+                                    </DataTrigger.ExitActions>
+                                </DataTrigger>
                                 <DataTrigger Binding="{Binding IsRenaming}" Value="True">
                                     <Setter TargetName="DisplayPanel" Property="Visibility" Value="Collapsed" />
                                     <Setter TargetName="Actions" Property="Visibility" Value="Collapsed" />
@@ -335,15 +359,15 @@
                                                 </StackPanel>
 
                                                 <!-- 본문 -->
-                                                <TextBlock x:Name="RawText" Text="{Binding Content}" Foreground="{StaticResource ForegroundBrush}" TextWrapping="Wrap" LineHeight="21"
+                                                <TextBlock x:Name="RawText" Text="{Binding Content}" Foreground="{StaticResource ForegroundBrush}" TextWrapping="Wrap"
                                                            Visibility="{Binding ShowMarkdown, Converter={StaticResource InverseBoolToVis}}" />
                                                 <controls:MarkdownPresenter x:Name="Markdown" Markdown="{Binding Content}" Visibility="{Binding ShowMarkdown, Converter={StaticResource BoolToVis}}" />
 
-                                                <!-- 타이핑 대기 애니메이션 -->
-                                                <StackPanel x:Name="Typing" Orientation="Horizontal" Visibility="Collapsed" Margin="2,2,0,2">
-                                                    <Ellipse x:Name="Dot1" Width="7" Height="7" Margin="0,0,5,0" Fill="{StaticResource AccentBrush}" Opacity="0.35" />
-                                                    <Ellipse x:Name="Dot2" Width="7" Height="7" Margin="0,0,5,0" Fill="{StaticResource AccentBrush}" Opacity="0.35" />
-                                                    <Ellipse x:Name="Dot3" Width="7" Height="7" Fill="{StaticResource AccentBrush}" Opacity="0.35" />
+                                                <!-- 타이핑 대기 애니메이션: 텍스트 한 줄 높이 안에서 점만 움직인다 -->
+                                                <StackPanel x:Name="Typing" Orientation="Horizontal" Visibility="Collapsed" Height="19" VerticalAlignment="Center">
+                                                    <Ellipse x:Name="Dot1" Width="7" Height="7" Margin="0,0,5,0" VerticalAlignment="Center" Fill="{StaticResource AccentBrush}" Opacity="0.35" />
+                                                    <Ellipse x:Name="Dot2" Width="7" Height="7" Margin="0,0,5,0" VerticalAlignment="Center" Fill="{StaticResource AccentBrush}" Opacity="0.35" />
+                                                    <Ellipse x:Name="Dot3" Width="7" Height="7" VerticalAlignment="Center" Fill="{StaticResource AccentBrush}" Opacity="0.35" />
                                                 </StackPanel>
 
                                                 <Border x:Name="AbortedChip" Visibility="Collapsed" HorizontalAlignment="Left" Margin="0,6,0,0" Padding="6,2" CornerRadius="4" Background="{StaticResource InlineCodeBackgroundBrush}">
@@ -400,6 +424,8 @@
                                     </DataTrigger>
                                     <DataTrigger Binding="{Binding IsWaiting}" Value="True">
                                         <Setter TargetName="Typing" Property="Visibility" Value="Visible" />
+                                        <!-- 대기 중에는 빈 본문이 한 줄을 차지하지 않도록 숨겨 말풍선을 한 줄 높이로 유지 -->
+                                        <Setter TargetName="RawText" Property="Visibility" Value="Collapsed" />
                                         <DataTrigger.EnterActions>
                                             <BeginStoryboard x:Name="TypingSb">
                                                 <Storyboard RepeatBehavior="Forever">
@@ -501,6 +527,11 @@
                                     <TextBlock Text="프리셋" Margin="6,0,0,0" VerticalAlignment="Center" FontSize="12.5" />
                                 </StackPanel>
                             </Button>
+
+                            <!-- 전송이 막힌 이유 안내 -->
+                            <TextBlock Foreground="{StaticResource MutedForegroundBrush}" FontSize="11.5" VerticalAlignment="Center" Margin="10,0,0,0" TextTrimming="CharacterEllipsis"
+                                       Text="{Binding StreamingConversationTitle, StringFormat='‘{0}’ 대화에서 응답을 생성 중이에요. 끝나면 전송할 수 있어요.'}"
+                                       Visibility="{Binding IsSendBlockedByOtherConversation, Converter={StaticResource BoolToVis}}" />
                         </StackPanel>
 
                         <Button HorizontalAlignment="Right" Command="{Binding SendCommand}" Style="{StaticResource AccentButtonStyle}" Padding="14,7"

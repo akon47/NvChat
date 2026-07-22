@@ -2,9 +2,12 @@ using NvChat.Models;
 using NvChat.ViewModels;
 using System;
 using System.ComponentModel;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Interop;
+using System.Windows.Threading;
 
 namespace NvChat.Views
 {
@@ -241,6 +244,25 @@ namespace NvChat.Views
             if (viewModel != null)
                 viewModel.IsModelPickerOpen = false;
         }
+
+        /// <summary>
+        /// WPF Popup 은 자체 HWND 라서 네이티브 포커스를 받지 못하면 한글 IME 조합이 깨진다.
+        /// 팝업이 열릴 때 팝업 HWND 에 직접 포커스를 준 뒤 검색 상자에 키보드 포커스를 준다.
+        /// </summary>
+        private void ModelPickerPopup_Opened(object sender, EventArgs e)
+        {
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                if (PresentationSource.FromVisual(ModelSearchBox) is HwndSource source && source.Handle != IntPtr.Zero)
+                    SetFocus(source.Handle);
+
+                ModelSearchBox.Focus();
+                Keyboard.Focus(ModelSearchBox);
+            }), DispatcherPriority.Input);
+        }
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr SetFocus(IntPtr hWnd);
 
         #endregion
 

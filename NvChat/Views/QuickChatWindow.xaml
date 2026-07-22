@@ -57,13 +57,13 @@
                         <Grid Margin="0,5">
                             <Border x:Name="Bubble" HorizontalAlignment="Left" MaxWidth="560" Background="{StaticResource AssistantBubbleBackgroundBrush}" BorderBrush="{StaticResource AssistantBubbleBorderBrush}" BorderThickness="1" CornerRadius="10" Padding="12,9">
                                 <StackPanel>
-                                    <TextBlock x:Name="RawText" Text="{Binding Content}" Foreground="{StaticResource ForegroundBrush}" TextWrapping="Wrap" LineHeight="20"
+                                    <TextBlock x:Name="RawText" Text="{Binding Content}" Foreground="{StaticResource ForegroundBrush}" TextWrapping="Wrap"
                                                Visibility="{Binding ShowMarkdown, Converter={StaticResource InverseBoolToVis}}" />
                                     <controls:MarkdownPresenter x:Name="Markdown" Markdown="{Binding Content}" Visibility="{Binding ShowMarkdown, Converter={StaticResource BoolToVis}}" />
-                                    <StackPanel x:Name="Typing" Orientation="Horizontal" Visibility="Collapsed" Margin="2,2,0,2">
-                                        <Ellipse x:Name="Dot1" Width="6" Height="6" Margin="0,0,5,0" Fill="{StaticResource AccentBrush}" Opacity="0.35" />
-                                        <Ellipse x:Name="Dot2" Width="6" Height="6" Margin="0,0,5,0" Fill="{StaticResource AccentBrush}" Opacity="0.35" />
-                                        <Ellipse x:Name="Dot3" Width="6" Height="6" Fill="{StaticResource AccentBrush}" Opacity="0.35" />
+                                    <StackPanel x:Name="Typing" Orientation="Horizontal" Visibility="Collapsed" Height="18" VerticalAlignment="Center">
+                                        <Ellipse x:Name="Dot1" Width="6" Height="6" Margin="0,0,5,0" VerticalAlignment="Center" Fill="{StaticResource AccentBrush}" Opacity="0.35" />
+                                        <Ellipse x:Name="Dot2" Width="6" Height="6" Margin="0,0,5,0" VerticalAlignment="Center" Fill="{StaticResource AccentBrush}" Opacity="0.35" />
+                                        <Ellipse x:Name="Dot3" Width="6" Height="6" VerticalAlignment="Center" Fill="{StaticResource AccentBrush}" Opacity="0.35" />
                                     </StackPanel>
                                 </StackPanel>
                             </Border>
@@ -82,6 +82,7 @@
                             </DataTrigger>
                             <DataTrigger Binding="{Binding IsWaiting}" Value="True">
                                 <Setter TargetName="Typing" Property="Visibility" Value="Visible" />
+                                <Setter TargetName="RawText" Property="Visibility" Value="Collapsed" />
                                 <DataTrigger.EnterActions>
                                     <BeginStoryboard x:Name="QSb">
                                         <Storyboard RepeatBehavior="Forever">
