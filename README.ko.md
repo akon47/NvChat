@@ -16,11 +16,11 @@
 ![.NET](https://img.shields.io/badge/.NET-8.0-512BD4)
 ![platform](https://img.shields.io/badge/platform-Windows-0078D6)
 
-<img src="docs/screenshot.png" alt="NvChat 스크린샷" width="880">
+<img src="docs/screenshot.ko.png" alt="NvChat 스크린샷" width="880">
 
 <br>
 
-<img src="docs/demo.gif" alt="실시간 마크다운 스트리밍" width="720">
+<img src="docs/demo.ko.gif" alt="실시간 마크다운 스트리밍" width="720">
 
 <sub>답변이 스트리밍되는 도중에도 마크다운이 실시간으로 렌더링됩니다.</sub>
 
@@ -47,6 +47,7 @@
 - **내보내기** — 대화 전체 복사 / Markdown 파일로 저장
 - **편의** — 맨 아래로 스크롤 버튼, 창 크기/위치 기억, 사이드바 접기, 단축키
 - **안전한 저장** — API 키는 Windows DPAPI 로 암호화, 원자적 파일 쓰기 + 손상 파일 자동 백업
+- **다국어** — 영어 · 한국어 UI, 설정에서 전환 (첫 실행 시 Windows 언어로 자동 선택)
 - **UI** — 커스텀 보더리스 다크 테마(NVIDIA 그린 액센트), 챗GPT/클로드식 레이아웃(말풍선은 내 메시지에만)
 
 ## 📦 다운로드

@@ -1,3 +1,4 @@
+using NvChat.Localization;
 using System;
 using System.Windows;
 using WinForms = System.Windows.Forms;
@@ -29,13 +30,25 @@ namespace NvChat.Services
 
             _icon.DoubleClick += (_, __) => OpenRequested?.Invoke();
 
-            var menu = new WinForms.ContextMenuStrip();
-            menu.Items.Add("열기", null, (_, __) => OpenRequested?.Invoke());
-            menu.Items.Add("빠른 채팅", null, (_, __) => QuickChatRequested?.Invoke());
-            menu.Items.Add("새 대화", null, (_, __) => NewChatRequested?.Invoke());
+            _icon.ContextMenuStrip = new WinForms.ContextMenuStrip();
+            BuildMenu();
+
+            // 언어가 바뀌면 코드로 만든 메뉴 라벨을 다시 그린다.
+            LocalizationManager.Instance.LanguageChanged += BuildMenu;
+        }
+
+        /// <summary>현재 언어로 트레이 메뉴를 다시 구성한다.</summary>
+        private void BuildMenu()
+        {
+            var L = LocalizationManager.Instance;
+            var menu = _icon.ContextMenuStrip;
+            menu.Items.Clear();
+
+            menu.Items.Add(L["TrayOpen"], null, (_, __) => OpenRequested?.Invoke());
+            menu.Items.Add(L["TrayQuickChat"], null, (_, __) => QuickChatRequested?.Invoke());
+            menu.Items.Add(L["TrayNewChat"], null, (_, __) => NewChatRequested?.Invoke());
             menu.Items.Add(new WinForms.ToolStripSeparator());
-            menu.Items.Add("종료", null, (_, __) => ExitRequested?.Invoke());
-            _icon.ContextMenuStrip = menu;
+            menu.Items.Add(L["TrayExit"], null, (_, __) => ExitRequested?.Invoke());
         }
 
         #endregion
@@ -71,6 +84,7 @@ namespace NvChat.Services
 
         public void Dispose()
         {
+            LocalizationManager.Instance.LanguageChanged -= BuildMenu;
             _icon.Visible = false;
             _icon.Dispose();
         }

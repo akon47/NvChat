@@ -38,7 +38,7 @@ namespace NvChat.Models
             get
             {
                 if (string.IsNullOrEmpty(ModelId))
-                    return "(알 수 없음)";
+                    return Localization.LocalizationManager.Instance["Unknown"];
 
                 var slash = ModelId.LastIndexOf('/');
                 return slash >= 0 && slash < ModelId.Length - 1 ? ModelId.Substring(slash + 1) : ModelId;
@@ -59,7 +59,8 @@ namespace NvChat.Models
 
         public string TotalText => FormatTokens(TotalTokens);
 
-        public string DetailText => $"요청 {Requests:N0}회 · 입력 {FormatTokens(PromptTokens)} · 출력 {FormatTokens(CompletionTokens)}";
+        public string DetailText => Localization.LocalizationManager.Instance.Tr(
+            "UsageDetail", Requests.ToString("N0"), FormatTokens(PromptTokens), FormatTokens(CompletionTokens));
 
         #endregion
     }

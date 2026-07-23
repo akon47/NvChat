@@ -1,3 +1,4 @@
+using NvChat.Localization;
 using NvChat.Models;
 using NvChat.Services.Api;
 using System;
@@ -21,6 +22,8 @@ namespace NvChat.Services
     /// </summary>
     public sealed class NvidiaClient : INvidiaClient, IDisposable
     {
+        private static LocalizationManager L => LocalizationManager.Instance;
+
         #region Constructors
 
         public NvidiaClient(Func<AppSettings> settingsAccessor)
@@ -308,10 +311,10 @@ namespace NvChat.Services
             var settings = _settingsAccessor() ?? new AppSettings();
 
             if (string.IsNullOrWhiteSpace(settings.ApiKey))
-                throw new NvidiaApiException("API 키가 설정되지 않았습니다. 설정에서 build.nvidia.com API 키를 입력하세요.");
+                throw new NvidiaApiException(L.Tr("ApiKeyNotSet"));
 
             if (string.IsNullOrWhiteSpace(settings.BaseUrl))
-                throw new NvidiaApiException("베이스 URL 이 비어 있습니다.");
+                throw new NvidiaApiException(L.Tr("BaseUrlEmpty"));
 
             return settings;
         }
@@ -377,7 +380,7 @@ namespace NvChat.Services
             var detail = TryExtractErrorDetail(body);
 
             if (string.IsNullOrWhiteSpace(detail))
-                detail = string.IsNullOrWhiteSpace(body) ? "(본문 없음)" : body.Trim();
+                detail = string.IsNullOrWhiteSpace(body) ? L.Tr("NoBody") : body.Trim();
 
             if (detail.Length > 500)
                 detail = detail.Substring(0, 500) + "…";
@@ -386,14 +389,14 @@ namespace NvChat.Services
 
             if (statusCode == 401 || statusCode == 403)
             {
-                hint = " (API 키가 올바른지 확인하세요)";
+                hint = L.Tr("HintCheckKey");
             }
             else if (statusCode == 429)
             {
                 var wait = TryReadRetryAfterSeconds(response);
                 hint = wait.HasValue
-                    ? $" (요청이 너무 많습니다. {wait.Value}초 후 다시 시도하세요)"
-                    : " (요청이 너무 많습니다. 잠시 후 다시 시도하세요)";
+                    ? L.Tr("HintRateLimitWait", wait.Value)
+                    : L.Tr("HintRateLimit");
             }
             else
             {

@@ -1,3 +1,4 @@
+using NvChat.Localization;
 using NvChat.Services;
 using NvChat.ViewModels;
 using NvChat.Views;
@@ -88,7 +89,7 @@ namespace NvChat
             catch (Exception ex)
             {
                 Log("startup", ex);
-                MessageBox.Show(Describe(ex), "NvChat 시작 오류", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show(Describe(ex), LocalizationManager.Instance["StartupErrorTitle"], MessageBoxButton.OK, MessageBoxImage.Error);
                 Shutdown(1);
             }
         }
@@ -147,11 +148,10 @@ namespace NvChat
             var registered = _hotKey?.Register(hotkey) ?? false;
 
             // 다른 앱이 이미 쓰는 조합이면 조용히 죽지 않도록 사용자에게 알린다.
-            var wantsHotkey = string.IsNullOrWhiteSpace(hotkey) == false
-                && hotkey.Equals("끄기", StringComparison.OrdinalIgnoreCase) == false;
+            var wantsHotkey = HotKeyService.IsDisabled(hotkey) == false;
 
             if (registered == false && wantsHotkey && _viewModel != null)
-                _viewModel.StatusMessage = $"전역 단축키({hotkey}) 등록에 실패했습니다. 다른 앱이 사용 중일 수 있어요. 설정에서 다른 조합을 선택하세요.";
+                _viewModel.StatusMessage = LocalizationManager.Instance.Tr("HotkeyRegisterFailed", hotkey);
         }
 
         /// <summary>트레이 '종료' 등에서 호출되는 실제 앱 종료.</summary>
@@ -190,7 +190,7 @@ namespace NvChat
         private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
         {
             Log("dispatcher", e.Exception);
-            MessageBox.Show(Describe(e.Exception), "NvChat 오류", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(Describe(e.Exception), LocalizationManager.Instance["ErrorTitle"], MessageBoxButton.OK, MessageBoxImage.Error);
             e.Handled = true;
         }
 
@@ -202,7 +202,7 @@ namespace NvChat
         private static string Describe(Exception ex)
         {
             if (ex == null)
-                return "알 수 없는 오류";
+                return LocalizationManager.Instance["UnknownError"];
 
             var message = ex.Message;
             if (ex.InnerException != null)

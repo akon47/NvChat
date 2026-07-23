@@ -23,13 +23,24 @@ namespace NvChat.ViewModels
     /// </summary>
     public class MainViewModel : WindowViewModel
     {
+        private static Localization.LocalizationManager L => Localization.LocalizationManager.Instance;
+
         #region Constructors
 
         public MainViewModel()
         {
             _settingsStore = new SettingsStore();
             _conversationStore = new ConversationStore();
+
+            // 언어 부트스트랩: 설정을 읽기 전에 OS 언어로 먼저 맞춰,
+            // 첫 실행 시 만들어지는 기본값(프리셋 이름 등)과 로드 오류 메시지가 올바른 언어로 나오게 한다.
+            Localization.LocalizationManager.Instance.Culture = Localization.LocalizationManager.ResolveDefaultCulture();
+
             _settings = _settingsStore.Load();
+
+            // 저장된 언어가 있으면 그것으로 확정(없으면 위 OS 기본값을 저장).
+            InitLanguage();
+
             _client = new NvidiaClient(() => _settings);
 
             Attachments = new ObservableCollection<AttachmentViewModel>();
@@ -101,7 +112,7 @@ namespace NvChat.ViewModels
 
         private async void OnCheckUpdate()
         {
-            StatusMessage = "새 버전을 확인하는 중…";
+            StatusMessage = L["CheckingUpdate"];
 
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
             var info = await _updateService.CheckAsync(cts.Token);
@@ -109,7 +120,7 @@ namespace NvChat.ViewModels
             if (info == null)
             {
                 // 문제가 아니라 확인 결과이므로 경고 배너로 계속 남겨 두지 않는다.
-                var message = $"최신 버전입니다. ({AppVersionText})";
+                var message = L.Tr("UpToDate", AppVersionText);
                 StatusMessage = message;
 
                 await Task.Delay(TimeSpan.FromSeconds(4));
@@ -137,8 +148,8 @@ namespace NvChat.ViewModels
                 var version = _update.Tag ?? ("v" + _update.Version.ToString(3));
 
                 return size == null
-                    ? $"새 버전 {version} 이 있습니다."
-                    : $"새 버전 {version} 이 있습니다. ({size})";
+                    ? L.Tr("UpdateAvailable", version)
+                    : L.Tr("UpdateAvailableSize", version, size);
             }
         }
 
@@ -168,8 +179,8 @@ namespace NvChat.ViewModels
 
         /// <summary>"내려받는 중 45%" 형태의 진행 표시.</summary>
         public string UpdateProgressText => _updateProgress >= 99.5
-            ? "설치하고 재시작합니다…"
-            : $"내려받는 중 {_updateProgress:0}%";
+            ? L["InstallingRestart"]
+            : L.Tr("Downloading", _updateProgress.ToString("0"));
 
         public ICommand InstallUpdateCommand => _installUpdateCommand ?? (_installUpdateCommand = new DelegateCommand(OnInstallUpdate, () => _update != null && _isUpdating == false));
 
@@ -219,7 +230,7 @@ namespace NvChat.ViewModels
             }
             catch (Exception ex)
             {
-                StatusMessage = "업데이트 실패: " + ex.Message + " (릴리즈 페이지에서 직접 내려받을 수 있습니다)";
+                StatusMessage = L.Tr("UpdateFailed", ex.Message);
 
                 try
                 {
@@ -288,12 +299,13 @@ namespace NvChat.ViewModels
         /// <summary>프롬프트 프리셋(설정에서 관리).</summary>
         public System.Collections.Generic.IReadOnlyList<PromptPreset> Presets => _settings.Presets ?? new System.Collections.Generic.List<PromptPreset>();
 
-        public IReadOnlyList<string> ExamplePrompts { get; } = new[]
+        // 필드 초기화가 아니라 게터로 둔다. (생성자에서 언어가 정해진 뒤에 평가되도록)
+        public IReadOnlyList<string> ExamplePrompts => new[]
         {
-            "간단한 파이썬 스크립트로 CSV 파일을 읽어 요약해줘",
-            "이 문장을 자연스러운 영어로 번역해줘",
-            "동시성과 병렬성의 차이를 예시로 설명해줘",
-            "여행 짐 싸기 체크리스트를 만들어줘"
+            L["Example1"],
+            L["Example2"],
+            L["Example3"],
+            L["Example4"]
         };
 
         #endregion
@@ -313,6 +325,7 @@ namespace NvChat.ViewModels
                     SyncSelectedModelToConversation();
                     RaisePropertyChanged(nameof(IsSelectedStreaming));
                     RaisePropertyChanged(nameof(IsSendBlockedByOtherConversation));
+                    RaisePropertyChanged(nameof(SendBlockedByOtherText));
                     RaiseCommandStates();
                 }
             }
@@ -411,6 +424,7 @@ namespace NvChat.ViewModels
                     RaisePropertyChanged(nameof(IsSelectedStreaming));
                     RaisePropertyChanged(nameof(IsSendBlockedByOtherConversation));
                     RaisePropertyChanged(nameof(StreamingConversationTitle));
+                    RaisePropertyChanged(nameof(SendBlockedByOtherText));
                     RaiseCommandStates();
                 }
             }
@@ -426,6 +440,9 @@ namespace NvChat.ViewModels
 
         /// <summary>응답을 생성 중인 대화의 제목(안내 문구용).</summary>
         public string StreamingConversationTitle => _streamingConversation?.Title;
+
+        /// <summary>전송 차단 안내 문구(완성된 지역화 문자열). StringFormat 은 바인딩을 못 받으므로 여기서 조립한다.</summary>
+        public string SendBlockedByOtherText => L.Tr("SendBlockedByOther", _streamingConversation?.Title ?? string.Empty);
 
 
         private bool _isModelLoading;
@@ -600,7 +617,7 @@ namespace NvChat.ViewModels
 
             if (HasApiKey == false)
             {
-                StatusMessage = "시작하려면 build.nvidia.com API 키가 필요합니다. 설정에서 입력하세요.";
+                StatusMessage = L["NeedApiKeyStart"];
                 OnOpenSettings();
             }
 
@@ -631,6 +648,23 @@ namespace NvChat.ViewModels
             return _settings;
         }
 
+        /// <summary>
+        /// 저장된 언어를 적용한다. 첫 실행(빈 값)이면 OS 언어로 기본값을 정해 저장한다.
+        /// </summary>
+        private void InitLanguage()
+        {
+            var lang = _settings.Language;
+
+            if (string.IsNullOrWhiteSpace(lang))
+            {
+                lang = Localization.LocalizationManager.ResolveDefaultCulture();
+                _settings.Language = lang;
+                _settingsStore.Save(_settings);
+            }
+
+            Localization.LocalizationManager.Instance.Culture = lang;
+        }
+
         public void ApplySettings(AppSettings settings)
         {
             if (settings == null)
@@ -645,6 +679,10 @@ namespace NvChat.ViewModels
 
             _settings = settings;
             _settingsStore.Save(_settings);
+
+            // 언어는 라이브 미리보기로 이미 적용돼 있지만, 저장 값 기준으로 한 번 더 확정한다.
+            if (string.IsNullOrWhiteSpace(_settings.Language) == false)
+                Localization.LocalizationManager.Instance.Culture = _settings.Language;
 
             RaisePropertyChanged(nameof(HasApiKey));
             RaisePropertyChanged(nameof(SendOnEnter));
@@ -757,7 +795,7 @@ namespace NvChat.ViewModels
             if (conversation == null)
                 return;
 
-            if (ConfirmCallback != null && ConfirmCallback("대화 삭제", $"'{conversation.Title}' 대화를 삭제할까요?") == false)
+            if (ConfirmCallback != null && ConfirmCallback(L["DeleteConversationTitle"], L.Tr("DeleteConversationMsg", conversation.Title)) == false)
                 return;
 
             // 스트리밍 중인 대화를 지우면 스트림도 함께 취소해야 IsStreaming 이 풀린다.
@@ -819,7 +857,7 @@ namespace NvChat.ViewModels
             if (_selectedConversation == null)
                 return;
 
-            if (ConfirmCallback != null && ConfirmCallback("메시지 비우기", "이 대화의 모든 메시지를 지울까요?") == false)
+            if (ConfirmCallback != null && ConfirmCallback(L["ClearMessagesTitle"], L["ClearMessagesMsg"]) == false)
                 return;
 
             _selectedConversation.Messages.Clear();
@@ -875,7 +913,7 @@ namespace NvChat.ViewModels
             catch (Exception ex)
             {
                 ReplaceModels(BuildFallbackModels());
-                StatusMessage = "모델 목록을 불러오지 못해 기본 목록을 사용합니다. " + ex.Message;
+                StatusMessage = L.Tr("ModelsLoadFailed", ex.Message);
             }
             finally
             {
@@ -950,7 +988,7 @@ namespace NvChat.ViewModels
 
             if (HasApiKey == false)
             {
-                StatusMessage = "API 키를 먼저 설정하세요.";
+                StatusMessage = L["NeedApiKey"];
                 OnOpenSettings();
                 return;
             }
@@ -966,7 +1004,7 @@ namespace NvChat.ViewModels
             Attachments.Clear();
 
             if (conversation.Messages.Count(m => m.IsUser) == 1)
-                conversation.Title = text.Length > 0 ? MakeTitle(text) : "이미지 대화";
+                conversation.Title = text.Length > 0 ? MakeTitle(text) : L["ImageConversation"];
 
             await GenerateResponseAsync(conversation);
         }
@@ -976,7 +1014,7 @@ namespace NvChat.ViewModels
             var dialog = new OpenFileDialog
             {
                 Multiselect = true,
-                Filter = "이미지 (*.png;*.jpg;*.jpeg;*.gif;*.bmp;*.webp)|*.png;*.jpg;*.jpeg;*.gif;*.bmp;*.webp|모든 파일 (*.*)|*.*"
+                Filter = L["FilterImages"] + " (*.png;*.jpg;*.jpeg;*.gif;*.bmp;*.webp)|*.png;*.jpg;*.jpeg;*.gif;*.bmp;*.webp|" + L["FilterAllFiles"] + " (*.*)|*.*"
             };
 
             if (dialog.ShowDialog() != true)
@@ -991,7 +1029,7 @@ namespace NvChat.ViewModels
                 }
                 catch (Exception ex)
                 {
-                    StatusMessage = "이미지를 불러오지 못했습니다: " + ex.Message;
+                    StatusMessage = L.Tr("ImageLoadFailed", ex.Message);
                 }
             }
         }
@@ -1089,7 +1127,7 @@ namespace NvChat.ViewModels
 
             if (HasApiKey == false)
             {
-                StatusMessage = "API 키를 먼저 설정하세요.";
+                StatusMessage = L["NeedApiKey"];
                 OnOpenSettings();
                 return;
             }
@@ -1148,7 +1186,7 @@ namespace NvChat.ViewModels
                 {
                     assistant.HasError = true;
                     assistant.Content = DescribeEmptyResponse(finishReason);
-                    StatusMessage = "모델이 내용을 만들지 않고 응답을 끝냈습니다. 응답 아래 '다시 생성'을 눌러 보세요.";
+                    StatusMessage = L["EmptyResponseHint"];
                 }
             }
             catch (OperationCanceledException)
@@ -1159,7 +1197,7 @@ namespace NvChat.ViewModels
             catch (Exception ex)
             {
                 assistant.HasError = true;
-                assistant.Content = "⚠ 오류: " + ex.Message;
+                assistant.Content = L.Tr("ErrorPrefix", ex.Message);
                 StatusMessage = ex.Message;
             }
             finally
@@ -1204,13 +1242,13 @@ namespace NvChat.ViewModels
             switch ((finishReason ?? string.Empty).ToLowerInvariant())
             {
                 case "content_filter":
-                    return "⚠ 응답이 콘텐츠 필터에 의해 차단되어 본문이 비었습니다.";
+                    return L["EmptyContentFilter"];
 
                 case "length":
-                    return "⚠ 최대 출력 토큰에 먼저 도달해 본문이 비었습니다. 고급 설정에서 최대 토큰을 늘려 보세요.";
+                    return L["EmptyLength"];
 
                 default:
-                    return "⚠ 모델이 본문 없이 응답을 끝냈습니다. 상류 서버의 일시적인 문제일 수 있으니 '다시 생성'을 눌러 보세요.";
+                    return L["EmptyGeneric"];
             }
         }
 
@@ -1245,7 +1283,7 @@ namespace NvChat.ViewModels
             {
                 var prompt = new List<ChatMessage>
                 {
-                    new ChatMessage { Role = ChatRole.System, Content = "다음 사용자 메시지에 어울리는 아주 짧은 대화 제목을 사용자와 같은 언어로 3~6단어로만 생성하세요. 따옴표/마침표/접두어 없이 제목 텍스트만 출력." },
+                    new ChatMessage { Role = ChatRole.System, Content = L["AutoTitlePrompt"] },
                     new ChatMessage { Role = ChatRole.User, Content = firstUser.Length > 500 ? firstUser.Substring(0, 500) : firstUser }
                 };
 
@@ -1356,11 +1394,11 @@ namespace NvChat.ViewModels
 
             var about = _settings.AboutYou?.Trim();
             if (string.IsNullOrEmpty(about) == false)
-                parts.Add("[사용자에 대한 정보]\n" + about);
+                parts.Add(L["SysAboutYou"] + "\n" + about);
 
             var style = _settings.ResponseStyle?.Trim();
             if (string.IsNullOrEmpty(style) == false)
-                parts.Add("[응답 방식]\n" + style);
+                parts.Add(L["SysResponseStyle"] + "\n" + style);
 
             var sys = conversation.SystemPrompt?.Trim();
             if (string.IsNullOrEmpty(sys) == false)
@@ -1413,7 +1451,7 @@ namespace NvChat.ViewModels
         {
             var firstLine = text.Replace("\r", " ").Replace("\n", " ").Trim();
             if (firstLine.Length == 0)
-                return "새 대화";
+                return L["NewChat"];
 
             const int maxLength = 30;
             if (firstLine.Length > maxLength)
@@ -1436,7 +1474,7 @@ namespace NvChat.ViewModels
             try
             {
                 Clipboard.SetText(text);
-                StatusMessage = "대화를 클립보드에 복사했습니다.";
+                StatusMessage = L["CopiedConversation"];
             }
             catch
             {
@@ -1460,11 +1498,11 @@ namespace NvChat.ViewModels
             try
             {
                 File.WriteAllText(dialog.FileName, BuildConversationMarkdown(_selectedConversation), Encoding.UTF8);
-                StatusMessage = "대화를 저장했습니다: " + dialog.FileName;
+                StatusMessage = L.Tr("ExportedTo", dialog.FileName);
             }
             catch (Exception ex)
             {
-                StatusMessage = "내보내기 실패: " + ex.Message;
+                StatusMessage = L.Tr("ExportFailed", ex.Message);
             }
         }
 
@@ -1478,7 +1516,7 @@ namespace NvChat.ViewModels
 
             foreach (var m in conversation.Messages)
             {
-                var who = m.IsUser ? "🧑 사용자" : m.IsAssistant ? "🤖 어시스턴트" : "⚙ 시스템";
+                var who = m.IsUser ? L["RoleUser"] : m.IsAssistant ? L["RoleAssistant"] : L["RoleSystem"];
                 sb.AppendLine("### " + who).AppendLine();
                 sb.AppendLine(m.Content ?? string.Empty).AppendLine();
             }

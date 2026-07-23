@@ -14,7 +14,7 @@
     <AssemblyTitle>NvChat</AssemblyTitle>
     <Product>NvChat</Product>
     <Company>NvChat</Company>
-    <Version>1.6.1</Version>
+    <Version>1.7.0</Version>
     <NeutralLanguage>ko-KR</NeutralLanguage>
     <ApplicationIcon>Resources\app.ico</ApplicationIcon>
     <!-- WPF 는 app.manifest 의 PerMonitorV2 를 사용. WinForms(트레이용) 활성화로 뜨는 DPI 경고만 억제. -->
@@ -52,6 +52,14 @@
     <Resource Include="Resources\app.ico" />
     <!-- 인앱 브랜드 마크(타이틀바/빈 상태) -->
     <Resource Include="Resources\brand.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 언어 JSON 은 단일 exe 배포를 위해 어셈블리에 임베드한다.
+         LocalizationManager 가 런타임에 매니페스트 리소스를 스캔한다. -->
+    <EmbeddedResource Include="Localization\*.json">
+      <LogicalName>NvChat.Localization.%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
   </ItemGroup>
 
 </Project>

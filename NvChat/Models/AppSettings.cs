@@ -64,6 +64,9 @@ namespace NvChat.Models
         /// <summary>시작할 때 GitHub Releases 에서 새 버전을 확인할지 여부.</summary>
         public bool AutoCheckUpdates { get; set; } = true;
 
+        /// <summary>UI 표시 언어(컬처 코드, 예: "en-US" / "ko-KR"). 비어 있으면 첫 실행 시 OS 언어로 결정.</summary>
+        public string Language { get; set; } = "";
+
 
         // ===== 창 상태(위치/크기) 복원용 =====
         public double? WindowLeft { get; set; }
@@ -74,14 +77,15 @@ namespace NvChat.Models
 
         public static List<PromptPreset> DefaultPresets()
         {
+            var L = Localization.LocalizationManager.Instance;
             return new List<PromptPreset>
             {
-                new PromptPreset("영어로 번역", "다음 문장을 자연스러운 영어로 번역해줘:\n\n"),
-                new PromptPreset("한국어로 번역", "Translate the following into natural Korean:\n\n"),
-                new PromptPreset("요약", "다음 내용을 핵심만 간단히 요약해줘:\n\n"),
-                new PromptPreset("코드 리뷰", "다음 코드를 리뷰하고 버그·개선점을 알려줘:\n\n"),
-                new PromptPreset("쉽게 설명", "다음 개념을 초보자도 이해하도록 예시와 함께 쉽게 설명해줘:\n\n"),
-                new PromptPreset("문법 교정", "다음 글의 맞춤법과 문법을 교정하고, 무엇을 고쳤는지 알려줘:\n\n")
+                new PromptPreset(L["PresetTranslateEnName"], L["PresetTranslateEnBody"]),
+                new PromptPreset(L["PresetTranslateKoName"], L["PresetTranslateKoBody"]),
+                new PromptPreset(L["PresetSummarizeName"], L["PresetSummarizeBody"]),
+                new PromptPreset(L["PresetCodeReviewName"], L["PresetCodeReviewBody"]),
+                new PromptPreset(L["PresetExplainName"], L["PresetExplainBody"]),
+                new PromptPreset(L["PresetGrammarName"], L["PresetGrammarBody"])
             };
         }
     }

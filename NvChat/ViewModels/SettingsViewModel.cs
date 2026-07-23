@@ -1,4 +1,5 @@
 using NvChat.Commands;
+using NvChat.Localization;
 using NvChat.Models;
 using NvChat.Services;
 using System;
@@ -17,6 +18,8 @@ namespace NvChat.ViewModels
     /// </summary>
     public class SettingsViewModel : WindowViewModel
     {
+        private static LocalizationManager L => LocalizationManager.Instance;
+
         #region Constructors
 
         public SettingsViewModel(AppSettings current)
@@ -35,6 +38,12 @@ namespace NvChat.ViewModels
             _globalHotkey = string.IsNullOrWhiteSpace(current.GlobalHotkey) ? "Ctrl+Shift+Space" : current.GlobalHotkey;
             _minimizeToTray = current.MinimizeToTrayOnClose;
             _autoCheckUpdates = current.AutoCheckUpdates;
+
+            Languages = Localization.LocalizationManager.Available
+                .Select(a => new LanguageOption(a.Culture, a.Display))
+                .ToArray();
+            _originalCulture = Localization.LocalizationManager.Instance.Culture;
+            _selectedLanguage = Languages.FirstOrDefault(l => l.Culture == _originalCulture) ?? Languages.FirstOrDefault();
             Presets = new ObservableCollection<PromptPreset>((current.Presets ?? AppSettings.DefaultPresets()).Select(p => new PromptPreset(p.Name, p.Text)));
             _temperature = parameters.Temperature;
             _topP = parameters.TopP;
@@ -210,7 +219,7 @@ namespace NvChat.ViewModels
             "Alt+Space",
             "Ctrl+Alt+N",
             "Ctrl+Shift+K",
-            "끄기"
+            LocalizationManager.Instance["HotkeyOff"]
         };
 
 
@@ -271,13 +280,57 @@ namespace NvChat.ViewModels
 
         private DelegateCommand _addPresetCommand;
 
-        public ICommand AddPresetCommand => _addPresetCommand ?? (_addPresetCommand = new DelegateCommand(() => Presets.Add(new PromptPreset("새 프리셋", ""))));
+        public ICommand AddPresetCommand => _addPresetCommand ?? (_addPresetCommand = new DelegateCommand(() => Presets.Add(new PromptPreset(L["NewPreset"], ""))));
 
 
         private DelegateCommand<PromptPreset> _removePresetCommand;
 
         public ICommand RemovePresetCommand => _removePresetCommand ?? (_removePresetCommand = new DelegateCommand<PromptPreset>(p => { if (p != null) Presets.Remove(p); }));
 
+
+        #endregion
+
+
+        #region Bindable Properties - 언어
+
+        /// <summary>언어 선택 항목.</summary>
+        public sealed class LanguageOption
+        {
+            public LanguageOption(string culture, string display)
+            {
+                Culture = culture;
+                Display = display;
+            }
+
+            public string Culture { get; }
+
+            public string Display { get; }
+        }
+
+        private readonly string _originalCulture;
+
+        public LanguageOption[] Languages { get; }
+
+        private LanguageOption _selectedLanguage;
+
+        public LanguageOption SelectedLanguage
+        {
+            get => _selectedLanguage;
+            set
+            {
+                if (SetProperty(ref _selectedLanguage, value) && value != null)
+                {
+                    // 라이브 미리보기: 고르는 즉시 UI 언어를 바꾼다. (취소하면 RevertLanguage 로 되돌린다)
+                    Localization.LocalizationManager.Instance.Culture = value.Culture;
+                }
+            }
+        }
+
+        /// <summary>저장하지 않고 창을 닫았을 때 원래 언어로 되돌린다.</summary>
+        public void RevertLanguage()
+        {
+            Localization.LocalizationManager.Instance.Culture = _originalCulture;
+        }
 
         #endregion
 
@@ -294,7 +347,7 @@ namespace NvChat.ViewModels
         }
 
         /// <summary>"현재 버전 1.3.0" 표시.</summary>
-        public string CurrentVersionText => "현재 버전 " + UpdateService.CurrentVersion.ToString(3);
+        public string CurrentVersionText => L.Tr("CurrentVersion", UpdateService.CurrentVersion.ToString(3));
 
 
         #endregion
@@ -316,9 +369,10 @@ namespace NvChat.ViewModels
                 GenerateTitles = _generateTitles,
                 AboutYou = _aboutYou ?? string.Empty,
                 ResponseStyle = _responseStyle ?? string.Empty,
-                GlobalHotkey = string.IsNullOrWhiteSpace(_globalHotkey) ? "끄기" : _globalHotkey,
+                GlobalHotkey = string.IsNullOrWhiteSpace(_globalHotkey) ? L["HotkeyOff"] : _globalHotkey,
                 MinimizeToTrayOnClose = _minimizeToTray,
                 AutoCheckUpdates = _autoCheckUpdates,
+                Language = _selectedLanguage?.Culture ?? _originalCulture,
                 Presets = Presets
                     .Where(p => string.IsNullOrWhiteSpace(p.Name) == false)
                     .Select(p => new PromptPreset(p.Name.Trim(), p.Text ?? string.Empty))
@@ -350,7 +404,7 @@ namespace NvChat.ViewModels
         {
             IsTesting = true;
             TestSucceeded = false;
-            TestStatus = "연결 확인 중…";
+            TestStatus = L["TestConnecting"];
 
             try
             {
@@ -361,12 +415,12 @@ namespace NvChat.ViewModels
                 var models = await client.GetModelsAsync(cts.Token);
 
                 TestSucceeded = true;
-                TestStatus = $"연결 성공 · 모델 {models.Count}개 확인됨";
+                TestStatus = L.Tr("TestSuccess", models.Count);
             }
             catch (Exception ex)
             {
                 TestSucceeded = false;
-                TestStatus = "연결 실패: " + ex.Message;
+                TestStatus = L.Tr("TestFailed", ex.Message);
             }
             finally
             {

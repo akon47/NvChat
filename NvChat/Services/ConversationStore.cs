@@ -1,3 +1,4 @@
+using NvChat.Localization;
 using NvChat.Models;
 using System;
 using System.Collections.Generic;
@@ -57,7 +58,7 @@ namespace NvChat.Services
             {
                 // 읽기 실패(잠금/권한 등): 기존 파일을 덮어쓰지 않도록 저장을 막는다.
                 CanSave = false;
-                LoadError = "대화 기록 파일을 읽지 못했습니다. 이번 세션의 새 대화는 저장되지 않습니다. (" + ex.Message + ")";
+                LoadError = LocalizationManager.Instance.Tr("ConvLoadReadError", ex.Message);
                 return new List<Conversation>();
             }
 
@@ -71,8 +72,8 @@ namespace NvChat.Services
                 // 손상된 JSON: 백업본을 남기고 빈 목록으로 시작(백업으로 수동 복구 가능).
                 var backup = BackupCorrupt();
                 LoadError = backup != null
-                    ? "대화 기록 파일이 손상되어 백업했습니다: " + backup
-                    : "대화 기록 파일이 손상되었습니다.";
+                    ? LocalizationManager.Instance.Tr("ConvBackedUp", backup)
+                    : LocalizationManager.Instance.Tr("ConvCorrupt");
                 return new List<Conversation>();
             }
         }

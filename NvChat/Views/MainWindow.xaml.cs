@@ -107,6 +107,8 @@ namespace NvChat.Views
 
             if (settingsViewModel.Saved)
                 viewModel.ApplySettings(settingsViewModel.BuildSettings());
+            else
+                settingsViewModel.RevertLanguage();
         }
 
         #endregion
@@ -284,7 +286,7 @@ namespace NvChat.Views
             var presets = viewModel.Presets;
             if (presets == null || presets.Count == 0)
             {
-                menu.Items.Add(new MenuItem { Header = "(프리셋 없음 — 설정에서 추가)", IsEnabled = false });
+                menu.Items.Add(new MenuItem { Header = NvChat.Localization.LocalizationManager.Instance["PresetsEmpty"], IsEnabled = false });
             }
             else
             {

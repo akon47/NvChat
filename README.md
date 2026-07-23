@@ -47,6 +47,7 @@ Streaming chat · saved conversations · live markdown/code rendering · reasoni
 - **Export** — copy the whole conversation or save as Markdown
 - **Quality of life** — scroll-to-bottom button, remembers window size/position, collapsible sidebar, keyboard shortcuts
 - **Safe storage** — API key encrypted with Windows DPAPI, atomic file writes + automatic backup of corrupt files
+- **Multi-language** — English & Korean UI, switchable in Settings (defaults to your Windows language on first run)
 - **UI** — custom borderless dark theme with an NVIDIA-green accent; ChatGPT/Claude-style layout (bubble only on your messages)
 
 ## 📦 Download

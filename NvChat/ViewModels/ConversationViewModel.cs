@@ -59,7 +59,8 @@ namespace NvChat.ViewModels
                 var tokens = Usage.Sum(u => u.TotalTokens);
                 var requests = Usage.Sum(u => u.Requests);
 
-                return $"합계 {ModelUsage.FormatTokens(tokens)} 토큰 · {requests:N0}회";
+                return Localization.LocalizationManager.Instance.Tr(
+                    "UsageSummary", ModelUsage.FormatTokens(tokens), requests.ToString("N0"));
             }
         }
 
@@ -69,7 +70,7 @@ namespace NvChat.ViewModels
         public void AddUsage(string modelId, int promptTokens, int completionTokens, bool hasTokens)
         {
             if (string.IsNullOrWhiteSpace(modelId))
-                modelId = "(알 수 없음)";
+                modelId = Localization.LocalizationManager.Instance["Unknown"];
 
             var entry = Usage.FirstOrDefault(u => string.Equals(u.ModelId, modelId, StringComparison.OrdinalIgnoreCase));
 
@@ -102,9 +103,9 @@ namespace NvChat.ViewModels
             {
                 var model = NvModel.FromId(_modelId ?? string.Empty).Name;
                 if (string.IsNullOrEmpty(model))
-                    model = "모델 미지정";
+                    model = Localization.LocalizationManager.Instance["ModelUnset"];
 
-                return $"{model}  ·  {Messages.Count}개";
+                return Localization.LocalizationManager.Instance.Tr("Subtitle", model, Messages.Count.ToString());
             }
         }
 
@@ -113,17 +114,19 @@ namespace NvChat.ViewModels
         {
             get
             {
+                var L = Localization.LocalizationManager.Instance;
+
                 if (_pinned)
-                    return "고정됨";
+                    return L["GroupPinned"];
 
                 var today = DateTime.Now.Date;
                 var day = _updatedAt.Date;
 
-                if (day >= today) return "오늘";
-                if (day == today.AddDays(-1)) return "어제";
-                if (day > today.AddDays(-7)) return "지난 7일";
-                if (day > today.AddDays(-30)) return "지난 30일";
-                return "이전";
+                if (day >= today) return L["GroupToday"];
+                if (day == today.AddDays(-1)) return L["GroupYesterday"];
+                if (day > today.AddDays(-7)) return L["GroupLast7"];
+                if (day > today.AddDays(-30)) return L["GroupLast30"];
+                return L["GroupOlder"];
             }
         }
 
@@ -151,7 +154,7 @@ namespace NvChat.ViewModels
 
         #region Bindable Properties
 
-        private string _title = "새 대화";
+        private string _title = Localization.LocalizationManager.Instance["NewChat"];
 
         public string Title
         {
@@ -275,7 +278,7 @@ namespace NvChat.ViewModels
             var vm = new ConversationViewModel
             {
                 Id = string.IsNullOrEmpty(data.Id) ? Guid.NewGuid().ToString("N") : data.Id,
-                Title = string.IsNullOrEmpty(data.Title) ? "새 대화" : data.Title,
+                Title = string.IsNullOrEmpty(data.Title) ? Localization.LocalizationManager.Instance["NewChat"] : data.Title,
                 ModelId = data.ModelId,
                 SystemPrompt = data.SystemPrompt ?? string.Empty,
                 Pinned = data.Pinned,

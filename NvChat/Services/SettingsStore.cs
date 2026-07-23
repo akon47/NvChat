@@ -1,3 +1,4 @@
+using NvChat.Localization;
 using NvChat.Models;
 using System;
 using System.IO;
@@ -56,7 +57,7 @@ namespace NvChat.Services
             {
                 // 읽기 실패: 기존 설정(암호화된 키 포함)을 덮어쓰지 않도록 저장을 막는다.
                 _blockSave = true;
-                LoadError = "설정 파일을 읽지 못해 이번 세션에서는 설정이 저장되지 않습니다. (" + ex.Message + ")";
+                LoadError = LocalizationManager.Instance.Tr("SetLoadReadError", ex.Message);
                 return new AppSettings();
             }
 
@@ -70,8 +71,8 @@ namespace NvChat.Services
                 // 손상: 백업 후 기본값으로 시작(백업으로 수동 복구 가능).
                 var backup = BackupCorrupt();
                 LoadError = backup != null
-                    ? "설정 파일이 손상되어 백업했습니다: " + backup
-                    : "설정 파일이 손상되었습니다.";
+                    ? LocalizationManager.Instance.Tr("SetBackedUp", backup)
+                    : LocalizationManager.Instance.Tr("SetCorrupt");
                 return new AppSettings();
             }
 
@@ -82,7 +83,7 @@ namespace NvChat.Services
             if (settings.ApiKey == null && string.IsNullOrEmpty(cipher) == false)
             {
                 _preservedCipher = cipher;
-                LoadError = "저장된 API 키를 이 계정에서 복호화할 수 없습니다. 키를 다시 입력하면 새로 저장됩니다.";
+                LoadError = LocalizationManager.Instance.Tr("SetKeyDecryptFail");
             }
 
             if (string.IsNullOrWhiteSpace(settings.BaseUrl))
@@ -137,7 +138,8 @@ namespace NvChat.Services
                 WindowWidth = settings.WindowWidth,
                 WindowHeight = settings.WindowHeight,
                 WindowMaximized = settings.WindowMaximized,
-                AutoCheckUpdates = settings.AutoCheckUpdates
+                AutoCheckUpdates = settings.AutoCheckUpdates,
+                Language = settings.Language
             };
 
             try

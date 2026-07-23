@@ -378,7 +378,7 @@ namespace NvChat.Controls
 
             var copyButton = new Button
             {
-                Content = "복사",
+                Content = Localization.LocalizationManager.Instance["CodeCopy"],
                 Margin = new Thickness(0, 3, 6, 3),
                 Padding = new Thickness(8, 2, 8, 2),
                 FontSize = 11.5,
@@ -390,7 +390,7 @@ namespace NvChat.Controls
                 try
                 {
                     Clipboard.SetText(code);
-                    copyButton.Content = "복사됨";
+                    copyButton.Content = Localization.LocalizationManager.Instance["CodeCopied"];
                 }
                 catch
                 {

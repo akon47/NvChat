@@ -143,7 +143,7 @@ namespace NvChat.Services
 
             var exePath = Environment.ProcessPath;
             if (string.IsNullOrEmpty(exePath) || File.Exists(exePath) == false)
-                throw new InvalidOperationException("실행 파일 경로를 찾을 수 없어 업데이트할 수 없습니다.");
+                throw new InvalidOperationException(Localization.LocalizationManager.Instance.Tr("UpdateNoExePath"));
 
             var newPath = exePath + ".new";
             var oldPath = ResolveRetiredPath(exePath);
@@ -166,7 +166,7 @@ namespace NvChat.Services
                     if (string.Equals(expected, actual, StringComparison.OrdinalIgnoreCase) == false)
                     {
                         TryDelete(newPath);
-                        throw new InvalidOperationException("내려받은 파일의 체크섬이 일치하지 않아 업데이트를 중단했습니다.");
+                        throw new InvalidOperationException(Localization.LocalizationManager.Instance.Tr("UpdateChecksumMismatch"));
                     }
                 }
             }
@@ -182,7 +182,7 @@ namespace NvChat.Services
             catch (Exception ex)
             {
                 TryDelete(newPath);
-                throw new InvalidOperationException("실행 파일을 교체할 수 없습니다. 쓰기 권한이 있는 폴더로 옮긴 뒤 다시 시도하세요. (" + ex.Message + ")");
+                throw new InvalidOperationException(Localization.LocalizationManager.Instance.Tr("UpdateReplaceFailed", ex.Message));
             }
 
             try

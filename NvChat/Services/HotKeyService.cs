@@ -81,17 +81,30 @@ namespace NvChat.Services
             return IntPtr.Zero;
         }
 
+        /// <summary>
+        /// 전역 단축키가 '끄기(비활성)' 상태인지. 언어별 "끄기" 라벨과 무관하게 인식하도록
+        /// 알려진 off 라벨(영어 Off / 한국어 끄기 / off / none)과 빈 값을 모두 처리한다.
+        /// </summary>
+        public static bool IsDisabled(string hotkey)
+        {
+            if (string.IsNullOrWhiteSpace(hotkey))
+                return true;
+
+            var n = hotkey.Trim();
+            return n.Equals("Off", StringComparison.OrdinalIgnoreCase)
+                || n.Equals("none", StringComparison.OrdinalIgnoreCase)
+                || n.Equals("끄기", StringComparison.Ordinal);
+        }
+
         public static bool TryParse(string hotkey, out uint modifiers, out uint virtualKey)
         {
             modifiers = 0;
             virtualKey = 0;
 
-            if (string.IsNullOrWhiteSpace(hotkey))
+            if (IsDisabled(hotkey))
                 return false;
 
             var normalized = hotkey.Trim();
-            if (normalized.Equals("끄기", StringComparison.OrdinalIgnoreCase) || normalized.Equals("off", StringComparison.OrdinalIgnoreCase) || normalized.Equals("none", StringComparison.OrdinalIgnoreCase))
-                return false;
 
             var parts = normalized.Split('+');
             if (parts.Length == 0)
