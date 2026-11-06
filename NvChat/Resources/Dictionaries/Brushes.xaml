@@ -29,8 +29,6 @@
 
     <SolidColorBrush x:Key="UserBubbleBackgroundBrush" popt:Freeze="True" Color="{StaticResource UserBubbleBackgroundColor}" />
     <SolidColorBrush x:Key="UserBubbleBorderBrush" popt:Freeze="True" Color="{StaticResource UserBubbleBorderColor}" />
-    <SolidColorBrush x:Key="AssistantBubbleBackgroundBrush" popt:Freeze="True" Color="{StaticResource AssistantBubbleBackgroundColor}" />
-    <SolidColorBrush x:Key="AssistantBubbleBorderBrush" popt:Freeze="True" Color="{StaticResource AssistantBubbleBorderColor}" />
 
     <SolidColorBrush x:Key="CodeBlockBackgroundBrush" popt:Freeze="True" Color="{StaticResource CodeBlockBackgroundColor}" />
     <SolidColorBrush x:Key="CodeHeaderBackgroundBrush" popt:Freeze="True" Color="{StaticResource CodeHeaderBackgroundColor}" />

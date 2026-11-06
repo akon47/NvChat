@@ -13,7 +13,7 @@
 [![downloads](https://img.shields.io/github/downloads/akon47/NvChat/total?color=76B900)](https://github.com/akon47/NvChat/releases)
 [![stars](https://img.shields.io/github/stars/akon47/NvChat?style=flat&color=76B900)](https://github.com/akon47/NvChat/stargazers)
 [![license](https://img.shields.io/github/license/akon47/NvChat)](LICENSE)
-![.NET](https://img.shields.io/badge/.NET-8.0-512BD4)
+![.NET](https://img.shields.io/badge/.NET-10.0-512BD4)
 ![platform](https://img.shields.io/badge/platform-Windows-0078D6)
 
 <img src="docs/screenshot.ko.png" alt="NvChat 스크린샷" width="880">
@@ -45,10 +45,11 @@
 - **대화 관리** — 사이드바 **검색**, **날짜별 그룹**(오늘/어제/…), **고정**, **이름 변경**, 자동 저장, 모델 기반 **제목 자동 생성**
 - **대화별 설정** — 시스템 프롬프트, Temperature/Top P/Max Tokens/Penalty 조절
 - **내보내기** — 대화 전체 복사 / Markdown 파일로 저장
-- **편의** — 맨 아래로 스크롤 버튼, 창 크기/위치 기억, 사이드바 접기, 단축키
+- **이미지 붙여넣기·드롭** — `Ctrl+V` 로 스크린샷을 붙여넣거나 이미지 파일을 채팅 영역에 끌어다 놓으면 첨부
+- **편의** — 대화 우클릭 메뉴(고정 · 이름 변경 · 삭제), 복사/내보내기 토스트, 닫을 수 있는 상태 배너, 맨 아래로 스크롤 버튼, 창 크기/위치 기억, 사이드바 접기, 설정 창에 정리된 단축키 목록, 트레이 최초 안내, 주기적 업데이트 확인
 - **안전한 저장** — API 키는 Windows DPAPI 로 암호화, 원자적 파일 쓰기 + 손상 파일 자동 백업
 - **다국어** — 영어 · 한국어 UI, 설정에서 전환 (첫 실행 시 Windows 언어로 자동 선택)
-- **UI** — 커스텀 보더리스 다크 테마(NVIDIA 그린 액센트), 챗GPT/클로드식 레이아웃(말풍선은 내 메시지에만)
+- **UI** — DWM 둥근 모서리·Windows 11 스냅 레이아웃·키보드 포커스 링을 갖춘 커스텀 다크 타이틀바, NVIDIA 그린 액센트, 챗GPT/클로드식 레이아웃(말풍선은 내 메시지에만), 대화상자·메뉴까지 테마 일관 적용
 
 ## 📦 다운로드
 
@@ -73,7 +74,17 @@
 |---|---|
 | `Enter` | 전송 (설정에서 `Ctrl+Enter` 전송으로 변경 가능) |
 | `Shift+Enter` | 줄바꿈 |
+| `Ctrl+V` | 클립보드 이미지 붙여넣기 (이미지 파일을 채팅 영역에 끌어다 놓아도 첨부) |
+| `Esc` | 생성 중단 |
 | `Ctrl+N` | 새 대화 |
+| `Ctrl+F` | 대화 검색 |
+| `F2` | 선택한 대화 이름 변경 |
+| `Ctrl+B` | 사이드바 토글 |
+| `Ctrl+M` | 모델 선택 열기 |
+| `Ctrl+R` | 마지막 응답 다시 생성 |
+| `Ctrl+Shift+C` | 대화 전체 복사 |
+| `Ctrl+E` | Markdown 으로 내보내기 |
+| `Ctrl+,` | 설정 |
 | `Ctrl+Shift+Space` | 어디서든 빠른 채팅 (전역 · 설정에서 변경) |
 
 ## 🛠️ 소스에서 빌드
@@ -84,10 +95,10 @@ dotnet run --project NvChat/NvChat.csproj
 
 # 단일 exe 배포 빌드 (파일 하나 생성)
 dotnet publish NvChat/NvChat.csproj -c Release
-# → NvChat/bin/Release/net8.0-windows/win-x64/publish/NvChat.exe
+# → NvChat/bin/Release/net10.0-windows/win-x64/publish/NvChat.exe
 ```
 
-요구 사항: .NET 8 SDK (Windows).
+요구 사항: .NET 10 SDK (Windows).
 
 ## 🚀 릴리스 (자동 배포)
 
@@ -102,7 +113,7 @@ git push origin v1.0.0
 
 ## 🧩 기술
 
-.NET 8 / WPF (`net8.0-windows`). MVVM 구조와 커스텀 `WindowView`(WindowChrome 보더리스 크롬),
+.NET 10 / WPF (`net10.0-windows`). CommunityToolkit.Mvvm 소스 생성기 기반 MVVM(코드비하인드 이벤트 핸들러 없이 첨부 동작으로 구성), 커스텀 `WindowView`(WindowChrome 다크 타이틀바 + DWM 둥근 모서리 + Windows 11 스냅 레이아웃),
 다크 팔레트, 자체 마크다운 렌더러/구문 강조기를 외부 UI 라이브러리 없이 구현했습니다.
 
 - 엔드포인트: `https://integrate.api.nvidia.com/v1` (OpenAI 호환, 설정에서 변경 가능)

@@ -9,15 +9,15 @@
         <ResourceDictionary Source="pack://application:,,,/NvChat;component/Resources/Dictionaries/Icons.xaml" />
     </ResourceDictionary.MergedDictionaries>
 
-    <!-- 캡션(창) 버튼 -->
+    <!-- 캡션(창) 버튼. Background 는 TemplateBinding — 스냅 레이아웃 호버(WindowView 가 비클라이언트에서 직접 칠함)도 이 경로로 보인다. -->
     <Style x:Key="CaptionButtonStyle" TargetType="{x:Type Button}">
         <Setter Property="Foreground" Value="{StaticResource SecondaryForegroundBrush}" />
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="Width" Value="46" />
         <Setter Property="Height" Value="34" />
-        <Setter Property="FontFamily" Value="Segoe Fluent Icons, Segoe MDL2 Assets" />
-        <Setter Property="FontSize" Value="10" />
         <Setter Property="Cursor" Value="Arrow" />
+        <Setter Property="Focusable" Value="False" />
+        <Setter Property="WindowChrome.IsHitTestVisibleInChrome" Value="True" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type Button}">
@@ -38,14 +38,7 @@
         </Setter>
     </Style>
 
-    <Style x:Key="CaptionCloseButtonStyle" TargetType="{x:Type Button}">
-        <Setter Property="Foreground" Value="{StaticResource SecondaryForegroundBrush}" />
-        <Setter Property="Background" Value="Transparent" />
-        <Setter Property="Width" Value="46" />
-        <Setter Property="Height" Value="34" />
-        <Setter Property="FontFamily" Value="Segoe Fluent Icons, Segoe MDL2 Assets" />
-        <Setter Property="FontSize" Value="10" />
-        <Setter Property="Cursor" Value="Arrow" />
+    <Style x:Key="CaptionCloseButtonStyle" TargetType="{x:Type Button}" BasedOn="{StaticResource CaptionButtonStyle}">
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type Button}">
@@ -63,36 +56,45 @@
         </Setter>
     </Style>
 
-    <!-- 커스텀 보더리스 창 스타일 -->
+    <!-- WindowChrome: GlassFrameThickness=1 이면 DWM 이 그림자·1px 테두리·둥근 모서리(Win11)를 그린다(0 이면 전부 사라짐).
+         최대화 상태에선 리사이즈 테두리를 0 으로 바꿔 화면 가장자리에서 커서가 리사이즈 모양으로 바뀌지 않게 한다. -->
+    <WindowChrome x:Key="NvWindowChrome"
+                  CaptionHeight="40"
+                  CornerRadius="0"
+                  GlassFrameThickness="1"
+                  NonClientFrameEdges="None"
+                  ResizeBorderThickness="6"
+                  UseAeroCaptionButtons="False" />
+    <WindowChrome x:Key="NvMaximizedWindowChrome"
+                  CaptionHeight="40"
+                  CornerRadius="0"
+                  GlassFrameThickness="1"
+                  NonClientFrameEdges="None"
+                  ResizeBorderThickness="0"
+                  UseAeroCaptionButtons="False" />
+
+    <!-- 커스텀 다크 타이틀바 창 스타일. 리사이즈 가능 창은 DWM 이 테두리를 그리므로 BorderThickness=0, 고정 크기 창(NoResize/CanMinimize)만 1px 직접 그린다. -->
     <Style x:Key="NvWindowStyle" TargetType="{x:Type views:WindowView}">
-        <Setter Property="WindowStyle" Value="None" />
         <Setter Property="AllowsTransparency" Value="False" />
         <Setter Property="Background" Value="{StaticResource WindowBackgroundBrush}" />
         <Setter Property="Foreground" Value="{StaticResource ForegroundBrush}" />
         <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}" />
+        <Setter Property="BorderThickness" Value="0" />
         <Setter Property="FontFamily" Value="Segoe UI, Malgun Gothic" />
         <Setter Property="FontSize" Value="13" />
         <Setter Property="TextOptions.TextFormattingMode" Value="Display" />
         <Setter Property="TextOptions.TextRenderingMode" Value="ClearType" />
         <Setter Property="UseLayoutRounding" Value="True" />
-        <Setter Property="WindowChrome.WindowChrome">
-            <Setter.Value>
-                <WindowChrome CaptionHeight="40"
-                              ResizeBorderThickness="6"
-                              CornerRadius="0"
-                              GlassFrameThickness="0"
-                              UseAeroCaptionButtons="False"
-                              NonClientFrameEdges="None" />
-            </Setter.Value>
-        </Setter>
+        <Setter Property="WindowChrome.WindowChrome" Value="{StaticResource NvWindowChrome}" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type views:WindowView}">
                     <Border x:Name="RootBorder"
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="1">
-                        <Grid>
+                            BorderThickness="{TemplateBinding BorderThickness}">
+                        <!-- 최대화 시 프레임이 화면 밖으로 밀리는 만큼(ContentMargin, DPI 반영) 콘텐츠를 안쪽으로 당긴다. -->
+                        <Grid Margin="{TemplateBinding ContentMargin}">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="40" />
                                 <RowDefinition Height="*" />
@@ -125,23 +127,25 @@
                                                   WindowChrome.IsHitTestVisibleInChrome="True" />
 
                                 <!-- 창 버튼 -->
-                                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center"
-                                            WindowChrome.IsHitTestVisibleInChrome="True">
+                                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                                     <Button x:Name="MinimizeButton"
                                             Style="{StaticResource CaptionButtonStyle}"
                                             Command="{TemplateBinding MinimizeCommand}"
+                                            AutomationProperties.Name="Minimize"
                                             Visibility="{Binding ShowMinimizeButton, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource BoolToVis}}">
                                         <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconWinMinimize}" Width="11" Height="11" />
                                     </Button>
                                     <Button x:Name="MaximizeButton"
                                             Style="{StaticResource CaptionButtonStyle}"
                                             Command="{TemplateBinding MaximizeCommand}"
+                                            AutomationProperties.Name="Maximize"
                                             Visibility="{Binding ShowMaximizeButton, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource BoolToVis}}">
                                         <Path x:Name="MaximizePath" Style="{StaticResource IconStyle}" Data="{StaticResource IconWinMaximize}" Width="11" Height="11" />
                                     </Button>
                                     <Button x:Name="CloseButton"
                                             Style="{StaticResource CaptionCloseButtonStyle}"
                                             Command="{TemplateBinding CloseCommand}"
+                                            AutomationProperties.Name="Close"
                                             Margin="0,0,4,0"
                                             Visibility="{Binding ShowCloseButton, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource BoolToVis}}">
                                         <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconClose}" Width="11" Height="11" />
@@ -157,14 +161,26 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMaximized" Value="True">
-                            <Setter TargetName="RootBorder" Property="BorderThickness" Value="0" />
-                            <Setter TargetName="RootBorder" Property="Padding" Value="7" />
+                            <Setter Property="WindowChrome.WindowChrome" Value="{StaticResource NvMaximizedWindowChrome}" />
                             <Setter TargetName="MaximizePath" Property="Data" Value="{StaticResource IconWinRestore}" />
+                            <Setter TargetName="MaximizeButton" Property="AutomationProperties.Name" Value="Restore" />
+                        </Trigger>
+                        <Trigger Property="ResizeMode" Value="CanMinimize">
+                            <Setter TargetName="MaximizeButton" Property="IsEnabled" Value="False" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
+        <Style.Triggers>
+            <!-- DWM 은 리사이즈 불가 창엔 테두리를 그리지 않는다 → 직접 1px. -->
+            <Trigger Property="ResizeMode" Value="NoResize">
+                <Setter Property="BorderThickness" Value="1" />
+            </Trigger>
+            <Trigger Property="ResizeMode" Value="CanMinimize">
+                <Setter Property="BorderThickness" Value="1" />
+            </Trigger>
+        </Style.Triggers>
     </Style>
 
 </ResourceDictionary>

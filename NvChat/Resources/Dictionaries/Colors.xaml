@@ -26,8 +26,6 @@
     <!-- ===== 말풍선 ===== -->
     <Color x:Key="UserBubbleBackgroundColor">#2A3A17</Color>
     <Color x:Key="UserBubbleBorderColor">#3F5F1E</Color>
-    <Color x:Key="AssistantBubbleBackgroundColor">#232324</Color>
-    <Color x:Key="AssistantBubbleBorderColor">#2F2F31</Color>
 
     <!-- ===== 코드 ===== -->
     <Color x:Key="CodeBlockBackgroundColor">#141415</Color>

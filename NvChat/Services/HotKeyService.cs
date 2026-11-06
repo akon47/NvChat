@@ -1,180 +1,123 @@
-using System;
 using System.Runtime.InteropServices;
 using System.Windows.Interop;
 
-namespace NvChat.Services
+namespace NvChat.Services;
+
+/// <summary>전역 단축키를 등록하고 눌렸을 때 이벤트를 발생시킨다. (메시지 전용 창 사용)</summary>
+public sealed class HotKeyService : IDisposable
 {
-    /// <summary>
-    /// 전역 단축키를 등록하고 눌렸을 때 이벤트를 발생시킨다. (메시지 전용 창 사용)
-    /// </summary>
-    public sealed class HotKeyService : IDisposable
+    private const int WmHotKey = 0x0312;
+    private const int HotKeyId = 0x4E56; // 'NV'
+    private const uint ModAlt = 0x0001, ModControl = 0x0002, ModShift = 0x0004, ModWin = 0x0008, ModNoRepeat = 0x4000;
+
+    private readonly HwndSource _source;
+    private bool _registered;
+
+    public HotKeyService()
     {
-        #region Constants
+        _source = new HwndSource(new HwndSourceParameters("NvChatHotKeyWindow") { ParentWindow = new IntPtr(-3) /* HWND_MESSAGE */ });
+        _source.AddHook(WndProc);
+    }
 
-        private const int WM_HOTKEY = 0x0312;
-        private const int HotKeyId = 0x4E56; // 'NV'
-        private const uint MOD_ALT = 0x0001, MOD_CONTROL = 0x0002, MOD_SHIFT = 0x0004, MOD_WIN = 0x0008, MOD_NOREPEAT = 0x4000;
+    public event Action? HotKeyPressed;
 
-        #endregion
+    /// <summary>단축키 문자열("Ctrl+Alt+Space")을 등록한다. 실패/끄기면 false.</summary>
+    public bool Register(string? hotkey)
+    {
+        Unregister();
+        if (!TryParse(hotkey, out uint mods, out uint vk)) return false;
+        _registered = RegisterHotKey(_source.Handle, HotKeyId, mods | ModNoRepeat, vk);
+        return _registered;
+    }
 
+    public void Unregister()
+    {
+        if (!_registered) return;
+        UnregisterHotKey(_source.Handle, HotKeyId);
+        _registered = false;
+    }
 
-        #region Fields
-
-        private readonly HwndSource _source;
-        private bool _registered;
-
-        #endregion
-
-
-        #region Constructors
-
-        public HotKeyService()
+    private nint WndProc(nint hwnd, int msg, nint wParam, nint lParam, ref bool handled)
+    {
+        if (msg == WmHotKey && wParam.ToInt32() == HotKeyId)
         {
-            var parameters = new HwndSourceParameters("NvChatHotKeyWindow")
-            {
-                ParentWindow = new IntPtr(-3) // HWND_MESSAGE (메시지 전용 창)
-            };
-            _source = new HwndSource(parameters);
-            _source.AddHook(WndProc);
+            HotKeyPressed?.Invoke();
+            handled = true;
         }
+        return 0;
+    }
 
-        #endregion
+    /// <summary>
+    /// 전역 단축키가 '끄기(비활성)' 상태인지. 언어별 "끄기" 라벨과 무관하게 인식하도록
+    /// 알려진 off 라벨(영어 Off / 한국어 끄기 / off / none)과 빈 값을 모두 처리한다.
+    /// </summary>
+    public static bool IsDisabled(string? hotkey) =>
+        string.IsNullOrWhiteSpace(hotkey)
+        || hotkey.Trim() is var n && (n.Equals("Off", StringComparison.OrdinalIgnoreCase) || n.Equals("none", StringComparison.OrdinalIgnoreCase) || n == "끄기");
 
+    public static bool TryParse(string? hotkey, out uint modifiers, out uint virtualKey)
+    {
+        modifiers = 0;
+        virtualKey = 0;
+        if (IsDisabled(hotkey)) return false;
 
-        #region Events
-
-        public event Action HotKeyPressed;
-
-        #endregion
-
-
-        #region Helpers
-
-        /// <summary>단축키 문자열("Ctrl+Alt+Space")을 등록한다. 실패/끄기면 false.</summary>
-        public bool Register(string hotkey)
+        string[] parts = hotkey!.Trim().Split('+');
+        foreach (string part in parts[..^1])
         {
-            Unregister();
-
-            if (TryParse(hotkey, out var mods, out var vk) == false)
-                return false;
-
-            _registered = RegisterHotKey(_source.Handle, HotKeyId, mods | MOD_NOREPEAT, vk);
-            return _registered;
-        }
-
-        public void Unregister()
-        {
-            if (_registered)
+            switch (part.Trim().ToLowerInvariant())
             {
-                UnregisterHotKey(_source.Handle, HotKeyId);
-                _registered = false;
+                case "ctrl" or "control": modifiers |= ModControl; break;
+                case "alt": modifiers |= ModAlt; break;
+                case "shift": modifiers |= ModShift; break;
+                case "win" or "windows": modifiers |= ModWin; break;
+                default: return false;
             }
         }
 
-        private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+        return TryMapKey(parts[^1].Trim(), out virtualKey) && modifiers != 0 && virtualKey != 0;
+    }
+
+    private static bool TryMapKey(string key, out uint vk)
+    {
+        vk = 0;
+        if (key.Length == 0) return false;
+
+        if (key.Length == 1 && char.ToUpperInvariant(key[0]) is var c && (c is >= 'A' and <= 'Z' or >= '0' and <= '9'))
         {
-            if (msg == WM_HOTKEY && wParam.ToInt32() == HotKeyId)
-            {
-                HotKeyPressed?.Invoke();
-                handled = true;
-            }
-            return IntPtr.Zero;
+            vk = c;
+            return true;
         }
 
-        /// <summary>
-        /// 전역 단축키가 '끄기(비활성)' 상태인지. 언어별 "끄기" 라벨과 무관하게 인식하도록
-        /// 알려진 off 라벨(영어 Off / 한국어 끄기 / off / none)과 빈 값을 모두 처리한다.
-        /// </summary>
-        public static bool IsDisabled(string hotkey)
+        switch (key.ToLowerInvariant())
         {
-            if (string.IsNullOrWhiteSpace(hotkey))
-                return true;
-
-            var n = hotkey.Trim();
-            return n.Equals("Off", StringComparison.OrdinalIgnoreCase)
-                || n.Equals("none", StringComparison.OrdinalIgnoreCase)
-                || n.Equals("끄기", StringComparison.Ordinal);
+            case "space": vk = 0x20; return true;
+            case "enter" or "return": vk = 0x0D; return true;
+            case "tab": vk = 0x09; return true;
+            case "`" or "grave": vk = 0xC0; return true;
         }
 
-        public static bool TryParse(string hotkey, out uint modifiers, out uint virtualKey)
+        if (key.StartsWith('F') || key.StartsWith('f'))
         {
-            modifiers = 0;
-            virtualKey = 0;
-
-            if (IsDisabled(hotkey))
-                return false;
-
-            var normalized = hotkey.Trim();
-
-            var parts = normalized.Split('+');
-            if (parts.Length == 0)
-                return false;
-
-            for (var i = 0; i < parts.Length - 1; i++)
-            {
-                switch (parts[i].Trim().ToLowerInvariant())
-                {
-                    case "ctrl": case "control": modifiers |= MOD_CONTROL; break;
-                    case "alt": modifiers |= MOD_ALT; break;
-                    case "shift": modifiers |= MOD_SHIFT; break;
-                    case "win": case "windows": modifiers |= MOD_WIN; break;
-                    default: return false;
-                }
-            }
-
-            var key = parts[parts.Length - 1].Trim();
-            if (TryMapKey(key, out virtualKey) == false)
-                return false;
-
-            return modifiers != 0 && virtualKey != 0;
-        }
-
-        private static bool TryMapKey(string key, out uint vk)
-        {
-            vk = 0;
-            if (string.IsNullOrEmpty(key))
-                return false;
-
-            if (key.Length == 1)
-            {
-                var c = char.ToUpperInvariant(key[0]);
-                if ((c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9'))
-                {
-                    vk = c;
-                    return true;
-                }
-            }
-
-            switch (key.ToLowerInvariant())
-            {
-                case "space": vk = 0x20; return true;
-                case "enter": case "return": vk = 0x0D; return true;
-                case "tab": vk = 0x09; return true;
-                case "`": case "grave": vk = 0xC0; return true;
-            }
-
-            if ((key.StartsWith("F", StringComparison.OrdinalIgnoreCase) || key.StartsWith("f")) && int.TryParse(key.Substring(1), out var n) && n >= 1 && n <= 12)
+            if (int.TryParse(key.AsSpan(1), out int n) && n is >= 1 and <= 12)
             {
                 vk = (uint)(0x70 + (n - 1));
                 return true;
             }
-
-            return false;
         }
 
-        public void Dispose()
-        {
-            Unregister();
-            _source.RemoveHook(WndProc);
-            _source.Dispose();
-        }
-
-        [DllImport("user32.dll")]
-        private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
-
-        [DllImport("user32.dll")]
-        private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
-
-        #endregion
+        return false;
     }
+
+    public void Dispose()
+    {
+        Unregister();
+        _source.RemoveHook(WndProc);
+        _source.Dispose();
+    }
+
+    [DllImport("user32.dll")]
+    private static extern bool RegisterHotKey(nint hWnd, int id, uint fsModifiers, uint vk);
+
+    [DllImport("user32.dll")]
+    private static extern bool UnregisterHotKey(nint hWnd, int id);
 }

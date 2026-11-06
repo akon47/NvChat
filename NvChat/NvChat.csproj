@@ -2,23 +2,26 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net10.0-windows</TargetFramework>
     <RootNamespace>NvChat</RootNamespace>
     <AssemblyName>NvChat</AssemblyName>
     <UseWPF>true</UseWPF>
+    <!-- 트레이 아이콘(NotifyIcon)만 WinForms 에서 빌려 쓴다. -->
     <UseWindowsForms>true</UseWindowsForms>
-    <Nullable>disable</Nullable>
-    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- preview: CommunityToolkit.Mvvm 8.4 가 partial property 에 [ObservableProperty] 를 생성하려면 C# preview(field 키워드)가 필요하다. -->
+    <LangVersion>preview</LangVersion>
     <Deterministic>true</Deterministic>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AssemblyTitle>NvChat</AssemblyTitle>
     <Product>NvChat</Product>
     <Company>NvChat</Company>
-    <Version>1.7.0</Version>
+    <Version>1.8.0</Version>
     <NeutralLanguage>ko-KR</NeutralLanguage>
     <ApplicationIcon>Resources\app.ico</ApplicationIcon>
-    <!-- WPF 는 app.manifest 의 PerMonitorV2 를 사용. WinForms(트레이용) 활성화로 뜨는 DPI 경고만 억제. -->
-    <NoWarn>$(NoWarn);WFAC010</NoWarn>
+    <!-- WPF 는 app.manifest 의 PerMonitorV2 를 사용. WinForms(트레이용) 활성화로 뜨는 DPI 경고(WFAC010/WFO0003)만 억제. -->
+    <NoWarn>$(NoWarn);WFAC010;WFO0003</NoWarn>
   </PropertyGroup>
 
   <!-- RID 는 restore 를 위해 항상 지정하되, Debug 내부 루프는 프레임워크 의존(가볍게)으로 둔다. -->
@@ -32,7 +35,7 @@
 
   <!-- 단일 self-contained exe 배포 설정(Release 전용).
        `dotnet publish -c Release` 한 번이면
-       bin\Release\net8.0-windows\win-x64\publish\NvChat.exe 파일 하나만으로
+       bin\Release\net10.0-windows\win-x64\publish\NvChat.exe 파일 하나만으로
        실행 가능한 결과물이 나온다. (.NET 런타임 미설치 PC 에서도 실행) -->
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <SelfContained>true</SelfContained>
@@ -42,9 +45,16 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- API 키를 로컬에 저장할 때 Windows DPAPI(CurrentUser)로 암호화하기 위한 유일한 외부 의존성.
-         순수 관리형 어셈블리라 단일 exe 에 문제없이 포함된다. -->
-    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
+    <!-- MVVM 소스 생성기([ObservableProperty]/[RelayCommand]). 순수 관리형이라 단일 exe 에 문제없이 포함된다. -->
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <!-- API 키 암호화(DPAPI)의 System.Security.Cryptography.ProtectedData 는 net10 windows TFM 에 기본 포함되어 패키지 참조가 필요 없다. -->
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- UseWindowsForms 가 끼워 넣는 암시적 using(System.Drawing / System.Windows.Forms)은 WPF 타입(Button, Color, KeyEventArgs…)과 충돌하므로 뺀다.
+         트레이(TrayService)만 WinForms 를 별칭으로 명시적으로 쓴다. -->
+    <Using Remove="System.Drawing" />
+    <Using Remove="System.Windows.Forms" />
   </ItemGroup>
 
   <ItemGroup>

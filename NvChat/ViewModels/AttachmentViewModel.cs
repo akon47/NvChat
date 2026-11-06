@@ -1,20 +1,11 @@
 using System.Windows.Media;
 
-namespace NvChat.ViewModels
+namespace NvChat.ViewModels;
+
+/// <summary>전송 전 입력창에 대기 중인 첨부 이미지.</summary>
+public sealed class AttachmentViewModel(string dataUri, ImageSource? preview)
 {
-    /// <summary>
-    /// 전송 전 입력창에 대기 중인 첨부 이미지.
-    /// </summary>
-    public class AttachmentViewModel : ViewModel
-    {
-        public AttachmentViewModel(string dataUri, ImageSource preview)
-        {
-            DataUri = dataUri;
-            Preview = preview;
-        }
+    public string DataUri => dataUri;
 
-        public string DataUri { get; }
-
-        public ImageSource Preview { get; }
-    }
+    public ImageSource? Preview => preview;
 }

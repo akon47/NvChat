@@ -16,7 +16,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: '10.0.x'
 
       # Release 는 self-contained(win-x64) 이므로 Release 컨텍스트에서 복원까지 함께 수행한다.
       # (별도 restore + --no-restore 로 나누면 런타임 팩이 복원되지 않아 실패한다.)

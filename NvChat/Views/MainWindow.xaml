@@ -19,6 +19,8 @@
     MinHeight="580"
     Style="{StaticResource NvWindowStyle}"
     WindowStartupLocation="CenterScreen"
+    behaviors:WindowBehaviors.Placement="{Binding WindowPlacement}"
+    behaviors:WindowBehaviors.SavePlacementCommand="{Binding SaveWindowPlacementCommand}"
     d:DataContext="{d:DesignInstance vm:MainViewModel}"
     >
 
@@ -29,6 +31,15 @@
 
     <views:WindowView.InputBindings>
         <KeyBinding Modifiers="Control" Key="N" Command="{Binding NewConversationCommand}" />
+        <KeyBinding Modifiers="Control" Key="F" Command="{Binding FocusSearchCommand}" />
+        <KeyBinding Modifiers="Control" Key="B" Command="{Binding ToggleSidebarCommand}" />
+        <KeyBinding Modifiers="Control" Key="M" Command="{Binding ToggleModelPickerCommand}" />
+        <KeyBinding Modifiers="Control" Key="R" Command="{Binding RegenerateLastCommand}" />
+        <KeyBinding Modifiers="Control" Key="E" Command="{Binding ExportConversationCommand}" />
+        <KeyBinding Modifiers="Control+Shift" Key="C" Command="{Binding CopyConversationCommand}" />
+        <KeyBinding Modifiers="Control" Key="OemComma" Command="{Binding OpenSettingsCommand}" />
+        <KeyBinding Key="F2" Command="{Binding RenameSelectedCommand}" />
+        <KeyBinding Key="Escape" Command="{Binding StopCommand}" />
     </views:WindowView.InputBindings>
 
     <!-- ================= 타이틀바: 사이드바 토글 + 모델 선택기 + 설정 ================= -->
@@ -60,10 +71,12 @@
                     </StackPanel>
                 </Button>
 
-                <Popup x:Name="ModelPickerPopup" IsOpen="{Binding IsModelPickerOpen, Mode=TwoWay}" PlacementTarget="{Binding ElementName=ModelPickerButton}" Placement="Bottom"
-                       StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade" Focusable="True" Opened="ModelPickerPopup_Opened">
+                <!-- 팝업이 열리면 검색 상자에 포커스(IME 포함), Esc 로 닫힘. 항목 클릭(이미 선택된 것 포함)·검색 Enter 로도 닫힌다. -->
+                <Popup IsOpen="{Binding IsModelPickerOpen, Mode=TwoWay}" PlacementTarget="{Binding ElementName=ModelPickerButton}" Placement="Bottom"
+                       StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade" Focusable="True"
+                       behaviors:PopupBehaviors.FocusOnOpen="{Binding ElementName=ModelSearchBox}">
                     <Border Background="{StaticResource CardBackgroundBrush}" BorderBrush="{StaticResource BorderStrongBrush}" BorderThickness="1" CornerRadius="10"
-                            Width="440" MaxHeight="500" Margin="0,4,0,0" SnapsToDevicePixels="True">
+                            Width="440" MaxHeight="500" Margin="6" SnapsToDevicePixels="True">
                         <Border.Effect>
                             <DropShadowEffect BlurRadius="18" ShadowDepth="3" Opacity="0.5" Color="Black" />
                         </Border.Effect>
@@ -73,12 +86,14 @@
                                 <RowDefinition Height="*" />
                             </Grid.RowDefinitions>
                             <Grid Grid.Row="0" Margin="0,0,0,6">
-                                <TextBox x:Name="ModelSearchBox" Text="{Binding ModelSearchText, UpdateSourceTrigger=PropertyChanged}" Tag="{loc:Loc PhModelSearch}" Padding="30,7,10,7" />
+                                <TextBox x:Name="ModelSearchBox" Text="{Binding ModelSearchText, UpdateSourceTrigger=PropertyChanged}" Tag="{loc:Loc PhModelSearch}" Padding="30,7,10,7"
+                                         behaviors:PopupBehaviors.EnterCommand="{Binding SelectFirstModelCommand}" />
                                 <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconSearch}" Width="15" Height="15" HorizontalAlignment="Left" Margin="9,0,0,0"
                                       Fill="{StaticResource MutedForegroundBrush}" IsHitTestVisible="False" />
                             </Grid>
                             <ListBox Grid.Row="1" ItemsSource="{Binding ModelsView}" SelectedItem="{Binding SelectedModel}" Background="Transparent" BorderThickness="0"
-                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled" PreviewMouseLeftButtonUp="ModelList_MouseUp">
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                     behaviors:PopupBehaviors.ClickCommand="{Binding CloseModelPickerCommand}">
                                 <ListBox.GroupStyle>
                                     <GroupStyle>
                                         <GroupStyle.HeaderTemplate>
@@ -108,7 +123,7 @@
                            Visibility="{Binding IsModelLoading, Converter={StaticResource BoolToVis}}" />
             </StackPanel>
 
-            <Button HorizontalAlignment="Right" Command="{Binding OpenSettingsCommand}" Style="{StaticResource SubtleButtonStyle}" Padding="10,6" ToolTip="{loc:Loc Settings}">
+            <Button HorizontalAlignment="Right" Command="{Binding OpenSettingsCommand}" Style="{StaticResource SubtleButtonStyle}" Padding="10,6" ToolTip="{loc:Loc TipSettings}">
                 <StackPanel Orientation="Horizontal">
                     <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconSettings}" Width="16" Height="16" />
                     <TextBlock Text="{loc:Loc Settings}" Margin="7,0,0,0" VerticalAlignment="Center" />
@@ -134,7 +149,7 @@
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
-                <Button Grid.Row="0" Command="{Binding NewConversationCommand}" Style="{StaticResource AccentButtonStyle}" Margin="12,12,12,6" Padding="12,9">
+                <Button Grid.Row="0" Command="{Binding NewConversationCommand}" Style="{StaticResource AccentButtonStyle}" Margin="12,12,12,6" Padding="12,9" ToolTip="{loc:Loc TipNewChat}">
                     <StackPanel Orientation="Horizontal">
                         <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconPlus}" Width="15" Height="15" />
                         <TextBlock Text="{loc:Loc NewChat}" Margin="7,0,0,0" VerticalAlignment="Center" />
@@ -142,7 +157,8 @@
                 </Button>
 
                 <Grid Grid.Row="1" Margin="12,4,12,6">
-                    <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Tag="{loc:Loc PhSearchConversations}" FontSize="12.5" Padding="30,6,8,6" />
+                    <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Tag="{loc:Loc PhSearchConversations}" FontSize="12.5" Padding="30,6,8,6" ToolTip="{loc:Loc TipSearch}"
+                             behaviors:FocusBehavior.FocusToken="{Binding SearchFocusToken}" behaviors:FocusBehavior.SelectAll="True" />
                     <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconSearch}" Width="14" Height="14" HorizontalAlignment="Left" Margin="9,0,0,0"
                           Fill="{StaticResource MutedForegroundBrush}" IsHitTestVisible="False" />
                 </Grid>
@@ -161,7 +177,29 @@
                     </ListBox.GroupStyle>
                     <ListBox.ItemTemplate>
                         <DataTemplate DataType="{x:Type vm:ConversationViewModel}">
-                            <Grid x:Name="ConvRow" Background="Transparent">
+                            <!-- Tag 에 MainViewModel 을 담아 두어 우클릭 메뉴(PlacementTarget.Tag)가 명령에 닿게 한다. -->
+                            <Grid x:Name="ConvRow" Background="Transparent" Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ListBox}}">
+                                <Grid.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Command="{Binding PlacementTarget.Tag.PinConversationCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}">
+                                            <MenuItem.Style>
+                                                <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
+                                                    <Setter Property="Header" Value="{loc:Loc MenuPin}" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Pinned}" Value="True">
+                                                            <Setter Property="Header" Value="{loc:Loc MenuUnpin}" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </MenuItem.Style>
+                                        </MenuItem>
+                                        <MenuItem Header="{loc:Loc TipRename}" InputGestureText="F2"
+                                                  Command="{Binding PlacementTarget.Tag.BeginRenameCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}" />
+                                        <Separator />
+                                        <MenuItem Header="{loc:Loc Delete}"
+                                                  Command="{Binding PlacementTarget.Tag.DeleteConversationCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}" />
+                                    </ContextMenu>
+                                </Grid.ContextMenu>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
@@ -191,8 +229,12 @@
                                     </Grid>
                                 </StackPanel>
 
+                                <!-- 인라인 이름 변경: Enter/포커스 잃음 = 확정, Esc = 취소 -->
                                 <TextBox x:Name="RenamePanel" Grid.Column="0" Text="{Binding RenameText, UpdateSourceTrigger=PropertyChanged}" Visibility="Collapsed" Padding="6,4" FontSize="13"
-                                         behaviors:FocusBehavior.FocusWhenVisible="True" KeyDown="RenameBox_KeyDown" LostFocus="RenameBox_LostFocus" />
+                                         behaviors:FocusBehavior.FocusWhenVisible="True" behaviors:FocusBehavior.SelectAll="True"
+                                         behaviors:TextBoxCommitBehavior.CommitCommand="{Binding DataContext.CommitRenameCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                         behaviors:TextBoxCommitBehavior.CancelCommand="{Binding DataContext.CancelRenameCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                         behaviors:TextBoxCommitBehavior.CommandParameter="{Binding}" />
 
                                 <StackPanel x:Name="Actions" Grid.Column="1" Orientation="Horizontal" Visibility="Hidden">
                                     <Button Command="{Binding DataContext.PinConversationCommand, RelativeSource={RelativeSource AncestorType=ListBox}}" CommandParameter="{Binding}"
@@ -260,7 +302,7 @@
                             </Grid>
 
                             <!-- 대기 상태: 설치 버튼 -->
-                            <Button x:Name="UpdateButton" Command="{Binding InstallUpdateCommand}" Style="{StaticResource AccentButtonStyle}" Content="{loc:Loc UpdateNow}"
+                            <Button Command="{Binding InstallUpdateCommand}" Style="{StaticResource AccentButtonStyle}" Content="{loc:Loc UpdateNow}"
                                     Padding="0,6" Margin="0,8,0,0" FontSize="12"
                                     Visibility="{Binding IsUpdateIdle, Converter={StaticResource BoolToVis}}" />
 
@@ -277,13 +319,12 @@
                             Margin="0,6,0,8" Padding="10,3" ToolTip="{loc:Loc TipCheckUpdate}">
                         <TextBlock Text="{Binding AppVersionText}" Foreground="{StaticResource MutedForegroundBrush}" FontSize="11" />
                     </Button>
-                    <!-- 잔여 할당량은 API 로 알 수 없으므로(실측 확인) 이 앱이 보낸 사용량만 담백하게 적는다. -->
                 </StackPanel>
             </Grid>
         </Border>
 
-        <!-- ===== 우측: 채팅 영역 ===== -->
-        <Grid Grid.Column="1">
+        <!-- ===== 우측: 채팅 영역 (이미지 파일을 어디에 놓아도 첨부) ===== -->
+        <Grid Grid.Column="1" behaviors:InputBehaviors.DropFilesCommand="{Binding AttachFilesCommand}">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
@@ -384,7 +425,7 @@
                 </StackPanel>
             </Border>
 
-            <!-- 상태 배너 -->
+            <!-- 상태 배너(경고/안내). 사용자가 닫을 수 있다. -->
             <Border Grid.Row="2" Margin="20,4,20,4" Padding="12,9" Background="{StaticResource CardBackgroundBrush}" BorderBrush="{StaticResource WarnBrush}" BorderThickness="1" CornerRadius="8"
                     Visibility="{Binding HasStatusMessage, Converter={StaticResource BoolToVis}}">
                 <Grid>
@@ -392,21 +433,22 @@
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <Path Grid.Column="0" Data="{StaticResource IconAlert}" Width="16" Height="16" Stretch="Uniform" Fill="{StaticResource WarnBrush}" VerticalAlignment="Center" Margin="0,0,10,0" />
                     <TextBlock Grid.Column="1" Text="{Binding StatusMessage}" Foreground="{StaticResource ForegroundBrush}" TextWrapping="Wrap" VerticalAlignment="Center" FontSize="12.5" />
                     <Button Grid.Column="2" Command="{Binding OpenSettingsCommand}" Style="{StaticResource SubtleButtonStyle}" Content="{loc:Loc OpenSettings}" Margin="10,0,0,0"
                             Visibility="{Binding HasApiKey, Converter={StaticResource InverseBoolToVis}}" />
+                    <Button Grid.Column="3" Command="{Binding DismissStatusCommand}" Style="{StaticResource SubtleButtonStyle}" Padding="6" Margin="6,0,0,0" ToolTip="{loc:Loc TipDismiss}">
+                        <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconClose}" Width="11" Height="11" />
+                    </Button>
                 </Grid>
             </Border>
 
             <!-- 메시지 목록 -->
             <Grid Grid.Row="3">
-                <ScrollViewer x:Name="MessagesScroller" VerticalScrollBarVisibility="Auto" Padding="20,6,14,6"
-                              behaviors:AutoScrollBehavior.IsEnabled="True" ScrollChanged="MessagesScroller_ScrollChanged">
-                    <!-- 대화 컬럼을 가운데로 모은다. 폭을 무한정 늘리면 한 줄이 너무 길어져 읽기 힘들고,
-                         상한만 두고 좌우 끝에 붙이면 넓은 창에서 가운데가 비어 어색해 보인다. -->
-                    <!-- Stretch + MaxWidth 조합이면 상한까지 늘어난 뒤 남는 공간에서 가운데로 놓인다.
+                <ScrollViewer x:Name="MessagesScroller" VerticalScrollBarVisibility="Auto" Padding="20,6,14,6" behaviors:AutoScrollBehavior.IsEnabled="True">
+                    <!-- 대화 컬럼을 가운데로 모은다. Stretch + MaxWidth 조합이면 상한까지 늘어난 뒤 남는 공간에서 가운데로 놓인다.
                          (HorizontalAlignment=Center 는 내용 크기로 줄어들어 버린다) -->
                     <ItemsControl ItemsSource="{Binding SelectedConversation.Messages}"
                                   MaxWidth="{StaticResource ConversationColumnWidth}" HorizontalAlignment="Stretch">
@@ -416,9 +458,7 @@
                                     <!-- Background=Transparent 로 말풍선+여백+(숨겨진)액션 영역 전체를 히트테스트 대상으로 만들어
                                          마우스를 버튼으로 내려도 호버가 끊기지 않게 한다. -->
                                     <StackPanel x:Name="Column" HorizontalAlignment="Left" Background="Transparent">
-                                        <!-- 기본(어시스턴트)은 말풍선을 씌우지 않는다. 클로드/챗GPT 처럼 본문이 그대로 놓인다.
-                                             RichTextBox 는 가용 너비를 전부 요구해서 짧은 답변에도 말풍선이 끝까지 늘어나는데,
-                                             애초에 말풍선이 없으면 그 문제 자체가 사라진다. 말풍선은 사용자 메시지에만 씌운다. -->
+                                        <!-- 기본(어시스턴트)은 말풍선을 씌우지 않는다. 본문이 그대로 놓이고, 말풍선은 사용자 메시지에만 씌운다. -->
                                         <Border x:Name="Bubble" Background="Transparent" BorderThickness="0" CornerRadius="12" Padding="2,2" HorizontalAlignment="Left">
                                             <StackPanel>
                                                 <!-- 첨부 이미지 -->
@@ -476,7 +516,8 @@
 
                                         <!-- 액션바: 말풍선 밖 하단 -->
                                         <StackPanel x:Name="MsgActions" Orientation="Horizontal" Margin="4,4,4,0" HorizontalAlignment="Left" Visibility="Hidden">
-                                            <Button Command="{Binding CopyCommand}" Style="{StaticResource SubtleButtonStyle}" Padding="6,3" ToolTip="{loc:Loc Copy}">
+                                            <Button Command="{Binding DataContext.CopyMessageCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"
+                                                    Style="{StaticResource SubtleButtonStyle}" Padding="6,3" ToolTip="{loc:Loc Copy}">
                                                 <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconCopy}" Width="14" Height="14" />
                                             </Button>
                                             <Button x:Name="EditBtn" Command="{Binding BeginEditCommand}" Style="{StaticResource SubtleButtonStyle}" Padding="6,3" Visibility="Collapsed" ToolTip="{loc:Loc TipEditRegen}">
@@ -527,8 +568,7 @@
                                     </DataTrigger>
                                     <DataTrigger Binding="{Binding IsWaiting}" Value="True">
                                         <Setter TargetName="Typing" Property="Visibility" Value="Visible" />
-                                        <!-- 대기 중에는 빈 본문이 자리를 차지하지 않도록 숨겨 말풍선을 점 크기로 유지.
-                                             마크다운 뷰어도 내용이 비어 있어도 최소 높이와 전체 너비를 잡으므로 함께 숨긴다. -->
+                                        <!-- 대기 중에는 빈 본문이 자리를 차지하지 않도록 숨겨 말풍선을 점 크기로 유지. -->
                                         <Setter TargetName="RawText" Property="Visibility" Value="Collapsed" />
                                         <Setter TargetName="Markdown" Property="Visibility" Value="Collapsed" />
                                         <DataTrigger.EnterActions>
@@ -576,9 +616,10 @@
                     </ItemsControl>
                 </StackPanel>
 
-                <!-- 맨 아래로 -->
-                <Button x:Name="ScrollToBottomButton" Click="ScrollToBottomButton_Click" Visibility="Collapsed" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,22,10" Width="36" Height="36"
-                        Background="{StaticResource CardBackgroundBrush}" BorderBrush="{StaticResource BorderStrongBrush}" Foreground="{StaticResource ForegroundBrush}" ToolTip="{loc:Loc TipScrollBottom}">
+                <!-- 맨 아래로: 목록이 끝에 있지 않을 때만 보인다 -->
+                <Button HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,22,10" Width="36" Height="36"
+                        Background="{StaticResource CardBackgroundBrush}" BorderBrush="{StaticResource BorderStrongBrush}" Foreground="{StaticResource ForegroundBrush}" ToolTip="{loc:Loc TipScrollBottom}"
+                        behaviors:ScrollToBottomBehavior.Target="{Binding ElementName=MessagesScroller}">
                     <Button.Template>
                         <ControlTemplate TargetType="Button">
                             <Border x:Name="Bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" CornerRadius="18">
@@ -592,15 +633,51 @@
                         </ControlTemplate>
                     </Button.Template>
                 </Button>
+
+                <!-- 토스트(복사됨 등): 잠깐 떠서 사라진다 -->
+                <Border HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,14" Padding="14,8" CornerRadius="8" IsHitTestVisible="False" Opacity="0"
+                        Background="{StaticResource CardBackgroundBrush}" BorderBrush="{StaticResource BorderStrongBrush}" BorderThickness="1">
+                    <Border.Effect>
+                        <DropShadowEffect BlurRadius="14" ShadowDepth="2" Opacity="0.4" Color="Black" />
+                    </Border.Effect>
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsToastVisible}" Value="True">
+                                    <DataTrigger.EnterActions>
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <DoubleAnimation Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.15" />
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </DataTrigger.EnterActions>
+                                    <DataTrigger.ExitActions>
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <DoubleAnimation Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.25" />
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </DataTrigger.ExitActions>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <TextBlock Text="{Binding ToastText}" Foreground="{StaticResource ForegroundBrush}" FontSize="12.5" />
+                </Border>
             </Grid>
 
-            <!-- ===== 입력 (Claude 식: 상단 텍스트 + 하단 툴바) ===== -->
+            <!-- ===== 입력 (상단 텍스트 + 하단 툴바) ===== -->
             <Border Grid.Row="4" Margin="20,6,20,16" Padding="10,8" Background="{StaticResource ControlBackgroundBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="14"
                     MaxWidth="{StaticResource ConversationColumnWidth}" HorizontalAlignment="Stretch">
                 <StackPanel>
-                    <TextBox x:Name="InputBox" Text="{Binding InputText, UpdateSourceTrigger=PropertyChanged}"
+                    <TextBox Text="{Binding InputText, UpdateSourceTrigger=PropertyChanged}"
                              Tag="{loc:Loc PhMessageInput}" Background="Transparent" BorderThickness="0" Padding="2,2,2,4"
-                             AcceptsReturn="True" TextWrapping="Wrap" MaxHeight="220" VerticalScrollBarVisibility="Auto" PreviewKeyDown="InputBox_PreviewKeyDown" />
+                             AcceptsReturn="True" TextWrapping="Wrap" MaxHeight="220" VerticalScrollBarVisibility="Auto"
+                             behaviors:FocusBehavior.FocusWhenVisible="True"
+                             behaviors:FocusBehavior.FocusToken="{Binding InputFocusToken}"
+                             behaviors:InputBehaviors.SendCommand="{Binding SendCommand}"
+                             behaviors:InputBehaviors.SendOnEnter="{Binding SendOnEnter}"
+                             behaviors:InputBehaviors.PasteImageCommand="{Binding PasteImageCommand}" />
 
                     <!-- 첨부 미리보기 -->
                     <ItemsControl ItemsSource="{Binding Attachments}" Margin="0,4,0,2" Visibility="{Binding HasAttachments, Converter={StaticResource BoolToVis}}">
@@ -627,7 +704,21 @@
                             <Button Command="{Binding AttachImageCommand}" Style="{StaticResource SubtleButtonStyle}" Padding="7" ToolTip="{loc:Loc TipAttachImage}">
                                 <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconAttach}" Width="19" Height="19" />
                             </Button>
-                            <Button x:Name="PresetButton" Click="PresetButton_Click" Style="{StaticResource SubtleButtonStyle}" Padding="8,6" ToolTip="{loc:Loc TipPresets}">
+                            <!-- 프리셋 드롭다운: 설정의 프리셋 목록을 메뉴로 띄워 입력창에 삽입 -->
+                            <Button Style="{StaticResource SubtleButtonStyle}" Padding="8,6" ToolTip="{loc:Loc TipPresets}"
+                                    behaviors:MenuBehaviors.IsDropDown="True" behaviors:MenuBehaviors.DropDownPlacement="Top">
+                                <Button.ContextMenu>
+                                    <ContextMenu ItemsSource="{Binding PresetMenu}">
+                                        <ContextMenu.ItemContainerStyle>
+                                            <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
+                                                <Setter Property="Header" Value="{Binding Header}" />
+                                                <Setter Property="IsEnabled" Value="{Binding IsEnabled}" />
+                                                <Setter Property="Command" Value="{Binding DataContext.InsertPresetCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                                <Setter Property="CommandParameter" Value="{Binding Preset}" />
+                                            </Style>
+                                        </ContextMenu.ItemContainerStyle>
+                                    </ContextMenu>
+                                </Button.ContextMenu>
                                 <StackPanel Orientation="Horizontal">
                                     <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconTune}" Width="15" Height="15" />
                                     <TextBlock Text="{loc:Loc Presets}" Margin="6,0,0,0" VerticalAlignment="Center" FontSize="12.5" />
@@ -647,8 +738,8 @@
                                 <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconSend}" Width="15" Height="15" Margin="7,0,0,0" />
                             </StackPanel>
                         </Button>
-                        <Button HorizontalAlignment="Right" Command="{Binding StopCommand}" Style="{StaticResource {x:Type Button}}" Padding="14,7"
-                                Visibility="{Binding IsSelectedStreaming, Converter={StaticResource BoolToVis}}" ToolTip="{loc:Loc Stop}">
+                        <Button HorizontalAlignment="Right" Command="{Binding StopCommand}" Padding="14,7"
+                                Visibility="{Binding IsSelectedStreaming, Converter={StaticResource BoolToVis}}" ToolTip="{loc:Loc TipStop}">
                             <StackPanel Orientation="Horizontal">
                                 <Path Data="{StaticResource IconStop}" Width="14" Height="14" Stretch="Uniform" Fill="{StaticResource ErrorBrush}" VerticalAlignment="Center" />
                                 <TextBlock Text="{loc:Loc Stop}" Margin="7,0,0,0" VerticalAlignment="Center" />

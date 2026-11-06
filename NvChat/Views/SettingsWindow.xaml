@@ -9,195 +9,259 @@
     xmlns:loc="clr-namespace:NvChat.Localization"
     mc:Ignorable="d"
     Title="{loc:Loc SettingsTitle}"
-    Width="580"
-    Height="700"
-    ResizeMode="NoResize"
+    Width="640"
+    Height="760"
+    MinWidth="560"
+    MinHeight="520"
+    ShowInTaskbar="False"
     ShowMinimizeButton="False"
     ShowMaximizeButton="False"
     Style="{StaticResource NvWindowStyle}"
     WindowStartupLocation="CenterOwner"
     d:DataContext="{d:DesignInstance vm:SettingsViewModel}"
     >
+    <views:WindowView.InputBindings>
+        <KeyBinding Key="Escape" Command="{Binding CancelCommand}" />
+    </views:WindowView.InputBindings>
+
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" Padding="24,18,24,18">
+        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" Padding="20,16,20,6">
             <StackPanel>
 
-                <!-- 언어 -->
-                <Grid Margin="0,0,0,18">
-                    <TextBlock Text="{loc:Loc SetLanguage}" Foreground="{StaticResource ForegroundBrush}" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" />
-                    <ComboBox HorizontalAlignment="Right" Width="200"
-                              ItemsSource="{Binding Languages}"
-                              SelectedItem="{Binding SelectedLanguage, Mode=TwoWay}">
-                        <ComboBox.ItemTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding Display}" />
-                            </DataTemplate>
-                        </ComboBox.ItemTemplate>
-                    </ComboBox>
-                </Grid>
+                <!-- ===== 연결 ===== -->
+                <Border Style="{StaticResource CardStyle}">
+                    <StackPanel>
+                        <Grid>
+                            <TextBlock Style="{StaticResource SectionTitleStyle}" Text="{loc:Loc SecConnection}" />
+                            <Button HorizontalAlignment="Right" Command="{Binding OpenApiKeyPageCommand}" Style="{StaticResource SubtleButtonStyle}" Content="{loc:Loc BtnGetApiKey}" FontSize="12" Padding="8,4" />
+                        </Grid>
+                        <TextBlock Style="{StaticResource HelpTextStyle}" Text="{loc:Loc ApiKeyHelp}" Margin="0,6,0,10" />
 
-                <!-- API 키 -->
-                <Grid Margin="0,0,0,6">
-                    <TextBlock Text="{loc:Loc ApiKey}" Foreground="{StaticResource ForegroundBrush}" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" />
-                    <Button HorizontalAlignment="Right"
-                            Command="{Binding OpenApiKeyPageCommand}"
-                            Style="{StaticResource SubtleButtonStyle}"
-                            Content="{loc:Loc BtnGetApiKey}"
-                            FontSize="12" />
-                </Grid>
-                <TextBlock Text="{loc:Loc ApiKeyHelp}"
-                           Foreground="{StaticResource MutedForegroundBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,8" />
-                <TextBox Text="{Binding ApiKey, UpdateSourceTrigger=PropertyChanged}"
-                         Tag="nvapi-..." FontFamily="Consolas, Segoe UI" />
+                        <TextBlock Style="{StaticResource FieldLabelStyle}" Text="{loc:Loc ApiKey}" Margin="0,0,0,4" />
+                        <TextBox Text="{Binding ApiKey, UpdateSourceTrigger=PropertyChanged}" Tag="nvapi-..." FontFamily="Consolas, Segoe UI" />
 
-                <!-- 베이스 URL -->
-                <TextBlock Text="{loc:Loc BaseUrl}" Foreground="{StaticResource ForegroundBrush}" FontSize="14" FontWeight="SemiBold" Margin="0,18,0,8" />
-                <TextBox Text="{Binding BaseUrl, UpdateSourceTrigger=PropertyChanged}"
-                         Tag="https://integrate.api.nvidia.com/v1" FontFamily="Consolas, Segoe UI" />
+                        <TextBlock Style="{StaticResource FieldLabelStyle}" Text="{loc:Loc BaseUrl}" Margin="0,12,0,4" />
+                        <TextBox Text="{Binding BaseUrl, UpdateSourceTrigger=PropertyChanged}" Tag="https://integrate.api.nvidia.com/v1" FontFamily="Consolas, Segoe UI" />
 
-                <!-- 연결 테스트 -->
-                <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
-                    <Button Command="{Binding TestConnectionCommand}" Content="{loc:Loc TestConnection}" Padding="14,7" />
-                    <TextBlock x:Name="TestStatusText"
-                               Text="{Binding TestStatus}"
-                               VerticalAlignment="Center"
-                               TextWrapping="Wrap"
-                               MaxWidth="360"
-                               FontSize="12"
-                               Margin="12,0,0,0">
-                        <TextBlock.Style>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="Foreground" Value="{StaticResource SecondaryForegroundBrush}" />
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding TestSucceeded}" Value="True">
-                                        <Setter Property="Foreground" Value="{StaticResource SuccessBrush}" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </TextBlock.Style>
-                    </TextBlock>
-                </StackPanel>
+                        <Grid Margin="0,12,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Button Grid.Column="0" Command="{Binding TestConnectionCommand}" Content="{loc:Loc TestConnection}" Padding="14,7" />
+                            <TextBlock Grid.Column="1" Text="{Binding TestStatus}" VerticalAlignment="Center" TextWrapping="Wrap" FontSize="12" Margin="12,0,0,0">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="{StaticResource SecondaryForegroundBrush}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding TestSucceeded}" Value="True">
+                                                <Setter Property="Foreground" Value="{StaticResource SuccessBrush}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Grid>
+                    </StackPanel>
+                </Border>
 
-                <Border Height="1" Background="{StaticResource BorderBrush}" Margin="0,20,0,16" />
+                <!-- ===== 일반 ===== -->
+                <Border Style="{StaticResource CardStyle}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SectionTitleStyle}" Text="{loc:Loc SecGeneral}" />
+                        <Grid Margin="0,12,0,0">
+                            <TextBlock Style="{StaticResource FieldLabelStyle}" Text="{loc:Loc SetLanguage}" />
+                            <ComboBox HorizontalAlignment="Right" Width="200" ItemsSource="{Binding Languages}" SelectedItem="{Binding SelectedLanguage, Mode=TwoWay}">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Display}" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </Grid>
+                        <CheckBox Content="{loc:Loc SendOnEnter}" IsChecked="{Binding SendOnEnter}" Margin="0,14,0,0" />
+                        <CheckBox Content="{loc:Loc GenerateTitles}" IsChecked="{Binding GenerateTitles}" Margin="0,10,0,0" />
+                    </StackPanel>
+                </Border>
 
-                <!-- 기본 모델 -->
-                <TextBlock Text="{loc:Loc DefaultModelId}" Foreground="{StaticResource ForegroundBrush}" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,8" />
-                <TextBox Text="{Binding DefaultModelId, UpdateSourceTrigger=PropertyChanged}"
-                         Tag="meta/llama-3.3-70b-instruct" FontFamily="Consolas, Segoe UI" />
+                <!-- ===== 데스크톱 런처 ===== -->
+                <Border Style="{StaticResource CardStyle}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SectionTitleStyle}" Text="{loc:Loc DesktopLauncher}" />
+                        <Grid Margin="0,12,0,0">
+                            <TextBlock Style="{StaticResource FieldLabelStyle}" Text="{loc:Loc QuickChatHotkey}" />
+                            <ComboBox HorizontalAlignment="Right" Width="180" ItemsSource="{Binding HotkeyOptions}" SelectedItem="{Binding GlobalHotkey}" />
+                        </Grid>
+                        <CheckBox Content="{loc:Loc MinimizeToTray}" IsChecked="{Binding MinimizeToTrayOnClose}" Margin="0,14,0,0" />
+                    </StackPanel>
+                </Border>
 
-                <!-- 기본 시스템 프롬프트 -->
-                <TextBlock Text="{loc:Loc DefaultSystemPrompt}" Foreground="{StaticResource ForegroundBrush}" FontSize="14" FontWeight="SemiBold" Margin="0,18,0,8" />
-                <TextBox Text="{Binding DefaultSystemPrompt, UpdateSourceTrigger=PropertyChanged}"
-                         Tag="{loc:Loc PhDefaultSystemPrompt}"
-                         AcceptsReturn="True" TextWrapping="Wrap" MinHeight="60" MaxHeight="120" VerticalScrollBarVisibility="Auto" />
+                <!-- ===== 새 대화 기본값 ===== -->
+                <Border Style="{StaticResource CardStyle}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SectionTitleStyle}" Text="{loc:Loc SecDefaults}" />
 
-                <!-- 동작 -->
-                <TextBlock Text="{loc:Loc Behavior}" Foreground="{StaticResource ForegroundBrush}" FontSize="14" FontWeight="SemiBold" Margin="0,18,0,10" />
-                <CheckBox Content="{loc:Loc SendOnEnter}" IsChecked="{Binding SendOnEnter}" Margin="0,0,0,10" />
-                <CheckBox Content="{loc:Loc GenerateTitles}" IsChecked="{Binding GenerateTitles}" />
+                        <TextBlock Style="{StaticResource FieldLabelStyle}" Text="{loc:Loc DefaultModelId}" Margin="0,12,0,4" />
+                        <TextBox Text="{Binding DefaultModelId, UpdateSourceTrigger=PropertyChanged}" Tag="meta/llama-3.3-70b-instruct" FontFamily="Consolas, Segoe UI" />
 
-                <!-- 업데이트 -->
-                <TextBlock Text="{loc:Loc Update}" Foreground="{StaticResource ForegroundBrush}" FontSize="14" FontWeight="SemiBold" Margin="0,18,0,6" />
-                <Grid Margin="0,0,0,8">
-                    <CheckBox Content="{loc:Loc AutoCheckUpdates}" IsChecked="{Binding AutoCheckUpdates}" VerticalAlignment="Center" />
-                    <TextBlock Text="{Binding CurrentVersionText}" HorizontalAlignment="Right" Foreground="{StaticResource MutedForegroundBrush}" FontSize="11.5" VerticalAlignment="Center" />
-                </Grid>
-                <TextBlock Foreground="{StaticResource MutedForegroundBrush}" FontSize="11.5" TextWrapping="Wrap"
-                           Text="{loc:Loc UpdateHelp}" />
+                        <TextBlock Style="{StaticResource FieldLabelStyle}" Text="{loc:Loc DefaultSystemPrompt}" Margin="0,12,0,4" />
+                        <TextBox Text="{Binding DefaultSystemPrompt, UpdateSourceTrigger=PropertyChanged}" Tag="{loc:Loc PhDefaultSystemPrompt}"
+                                 AcceptsReturn="True" TextWrapping="Wrap" MinHeight="60" MaxHeight="120" VerticalScrollBarVisibility="Auto" />
 
-                <Border Height="1" Background="{StaticResource BorderBrush}" Margin="0,20,0,16" />
+                        <TextBlock Style="{StaticResource FieldLabelStyle}" Text="{loc:Loc DefaultParams}" Margin="0,16,0,8" />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="24" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <Grid Margin="0,0,0,8">
+                                    <TextBlock Text="Temperature" Style="{StaticResource FieldLabelStyle}" />
+                                    <TextBlock HorizontalAlignment="Right" Foreground="{StaticResource AccentBrush}" FontSize="12" Text="{Binding Value, ElementName=STemp, StringFormat=F2}" />
+                                </Grid>
+                                <Slider x:Name="STemp" Minimum="0" Maximum="2" SmallChange="0.01" LargeChange="0.1" Value="{Binding Temperature, Mode=TwoWay}" Margin="0,0,0,14" />
 
-                <!-- 커스텀 지침 -->
-                <TextBlock Text="{loc:Loc CustomInstructions}" Foreground="{StaticResource ForegroundBrush}" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,8" />
-                <TextBlock Text="{loc:Loc AboutYou}" Foreground="{StaticResource SecondaryForegroundBrush}" FontSize="12" Margin="0,0,0,4" />
-                <TextBox Text="{Binding AboutYou, UpdateSourceTrigger=PropertyChanged}" Tag="{loc:Loc PhAboutYou}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="52" MaxHeight="110" VerticalScrollBarVisibility="Auto" />
-                <TextBlock Text="{loc:Loc ResponseStyle}" Foreground="{StaticResource SecondaryForegroundBrush}" FontSize="12" Margin="0,10,0,4" />
-                <TextBox Text="{Binding ResponseStyle, UpdateSourceTrigger=PropertyChanged}" Tag="{loc:Loc PhResponseStyle}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="52" MaxHeight="110" VerticalScrollBarVisibility="Auto" />
+                                <Grid Margin="0,0,0,8">
+                                    <TextBlock Text="Top P" Style="{StaticResource FieldLabelStyle}" />
+                                    <TextBlock HorizontalAlignment="Right" Foreground="{StaticResource AccentBrush}" FontSize="12" Text="{Binding Value, ElementName=STopP, StringFormat=F2}" />
+                                </Grid>
+                                <Slider x:Name="STopP" Minimum="0" Maximum="1" SmallChange="0.01" LargeChange="0.1" Value="{Binding TopP, Mode=TwoWay}" Margin="0,0,0,14" />
 
-                <Border Height="1" Background="{StaticResource BorderBrush}" Margin="0,20,0,16" />
+                                <Grid Margin="0,0,0,8">
+                                    <TextBlock Text="{loc:Loc MaxTokens}" Style="{StaticResource FieldLabelStyle}" />
+                                    <TextBlock HorizontalAlignment="Right" Foreground="{StaticResource AccentBrush}" FontSize="12" Text="{Binding Value, ElementName=SMax, StringFormat=F0}" />
+                                </Grid>
+                                <Slider x:Name="SMax" Minimum="256" Maximum="8192" SmallChange="128" LargeChange="512" Value="{Binding MaxTokens, Mode=TwoWay}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <Grid Margin="0,0,0,8">
+                                    <TextBlock Text="Frequency Penalty" Style="{StaticResource FieldLabelStyle}" />
+                                    <TextBlock HorizontalAlignment="Right" Foreground="{StaticResource AccentBrush}" FontSize="12" Text="{Binding Value, ElementName=SFreq, StringFormat=F2}" />
+                                </Grid>
+                                <Slider x:Name="SFreq" Minimum="-2" Maximum="2" SmallChange="0.01" LargeChange="0.1" Value="{Binding FrequencyPenalty, Mode=TwoWay}" Margin="0,0,0,14" />
 
-                <!-- 프롬프트 프리셋 -->
-                <Grid Margin="0,0,0,8">
-                    <TextBlock Text="{loc:Loc PromptPresets}" Foreground="{StaticResource ForegroundBrush}" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" />
-                    <Button HorizontalAlignment="Right" Command="{Binding AddPresetCommand}" Style="{StaticResource SubtleButtonStyle}" Content="{loc:Loc AddPreset}" FontSize="12.5" />
-                </Grid>
-                <ItemsControl ItemsSource="{Binding Presets}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Grid Margin="0,0,0,6">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="150" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <TextBox Grid.Column="0" Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Tag="{loc:Loc PhPresetName}" Margin="0,0,6,0" VerticalAlignment="Top" />
-                                <TextBox Grid.Column="1" Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" Tag="{loc:Loc PhPresetBody}" AcceptsReturn="True" TextWrapping="Wrap" MaxHeight="90" VerticalScrollBarVisibility="Auto" />
-                                <Button Grid.Column="2" Command="{Binding DataContext.RemovePresetCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"
-                                        Style="{StaticResource SubtleButtonStyle}" Padding="7" Margin="4,0,0,0" VerticalAlignment="Top" ToolTip="{loc:Loc Delete}">
-                                    <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconDelete}" Width="14" Height="14" />
-                                </Button>
-                            </Grid>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
+                                <Grid Margin="0,0,0,8">
+                                    <TextBlock Text="Presence Penalty" Style="{StaticResource FieldLabelStyle}" />
+                                    <TextBlock HorizontalAlignment="Right" Foreground="{StaticResource AccentBrush}" FontSize="12" Text="{Binding Value, ElementName=SPres, StringFormat=F2}" />
+                                </Grid>
+                                <Slider x:Name="SPres" Minimum="-2" Maximum="2" SmallChange="0.01" LargeChange="0.1" Value="{Binding PresencePenalty, Mode=TwoWay}" />
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
 
-                <Border Height="1" Background="{StaticResource BorderBrush}" Margin="0,20,0,16" />
+                <!-- ===== 개인화 ===== -->
+                <Border Style="{StaticResource CardStyle}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SectionTitleStyle}" Text="{loc:Loc SecPersonalization}" />
+                        <TextBlock Style="{StaticResource HelpTextStyle}" Text="{loc:Loc CustomInstructions}" Margin="0,4,0,10" />
 
-                <!-- 데스크톱 런처 -->
-                <TextBlock Text="{loc:Loc DesktopLauncher}" Foreground="{StaticResource ForegroundBrush}" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,10" />
-                <Grid Margin="0,0,0,12">
-                    <TextBlock Text="{loc:Loc QuickChatHotkey}" Foreground="{StaticResource SecondaryForegroundBrush}" FontSize="12.5" VerticalAlignment="Center" />
-                    <ComboBox HorizontalAlignment="Right" Width="180" ItemsSource="{Binding HotkeyOptions}" SelectedItem="{Binding GlobalHotkey}" />
-                </Grid>
-                <CheckBox Content="{loc:Loc MinimizeToTray}" IsChecked="{Binding MinimizeToTrayOnClose}" />
+                        <TextBlock Style="{StaticResource FieldLabelStyle}" Text="{loc:Loc AboutYou}" Margin="0,0,0,4" />
+                        <TextBox Text="{Binding AboutYou, UpdateSourceTrigger=PropertyChanged}" Tag="{loc:Loc PhAboutYou}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="52" MaxHeight="110" VerticalScrollBarVisibility="Auto" />
 
-                <!-- 기본 파라미터 -->
-                <TextBlock Text="{loc:Loc DefaultParams}" Foreground="{StaticResource ForegroundBrush}" FontSize="14" FontWeight="SemiBold" Margin="0,18,0,10" />
+                        <TextBlock Style="{StaticResource FieldLabelStyle}" Text="{loc:Loc ResponseStyle}" Margin="0,12,0,4" />
+                        <TextBox Text="{Binding ResponseStyle, UpdateSourceTrigger=PropertyChanged}" Tag="{loc:Loc PhResponseStyle}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="52" MaxHeight="110" VerticalScrollBarVisibility="Auto" />
 
-                <Grid Margin="0,0,0,10">
-                    <TextBlock Text="Temperature" Foreground="{StaticResource SecondaryForegroundBrush}" FontSize="12" />
-                    <TextBlock HorizontalAlignment="Right" Foreground="{StaticResource AccentBrush}" FontSize="12"
-                               Text="{Binding Value, ElementName=STemp, StringFormat=F2}" />
-                </Grid>
-                <Slider x:Name="STemp" Minimum="0" Maximum="2" SmallChange="0.01" LargeChange="0.1"
-                        Value="{Binding Temperature, Mode=TwoWay}" Margin="0,0,0,14" />
+                        <Grid Margin="0,16,0,6">
+                            <TextBlock Style="{StaticResource FieldLabelStyle}" Text="{loc:Loc PromptPresets}" />
+                            <Button HorizontalAlignment="Right" Command="{Binding AddPresetCommand}" Style="{StaticResource SubtleButtonStyle}" Content="{loc:Loc AddPreset}" FontSize="12.5" Padding="8,4" />
+                        </Grid>
+                        <ItemsControl ItemsSource="{Binding Presets}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,0,0,6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="150" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox Grid.Column="0" Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Tag="{loc:Loc PhPresetName}" Margin="0,0,6,0" VerticalAlignment="Top" />
+                                        <TextBox Grid.Column="1" Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" Tag="{loc:Loc PhPresetBody}" AcceptsReturn="True" TextWrapping="Wrap" MaxHeight="90" VerticalScrollBarVisibility="Auto" />
+                                        <Button Grid.Column="2" Command="{Binding DataContext.RemovePresetCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"
+                                                Style="{StaticResource SubtleButtonStyle}" Padding="7" Margin="4,0,0,0" VerticalAlignment="Top" ToolTip="{loc:Loc Delete}">
+                                            <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconDelete}" Width="14" Height="14" />
+                                        </Button>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
 
-                <Grid Margin="0,0,0,10">
-                    <TextBlock Text="Top P" Foreground="{StaticResource SecondaryForegroundBrush}" FontSize="12" />
-                    <TextBlock HorizontalAlignment="Right" Foreground="{StaticResource AccentBrush}" FontSize="12"
-                               Text="{Binding Value, ElementName=STopP, StringFormat=F2}" />
-                </Grid>
-                <Slider x:Name="STopP" Minimum="0" Maximum="1" SmallChange="0.01" LargeChange="0.1"
-                        Value="{Binding TopP, Mode=TwoWay}" Margin="0,0,0,14" />
+                <!-- ===== 키보드 단축키 ===== -->
+                <Border Style="{StaticResource CardStyle}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SectionTitleStyle}" Text="{loc:Loc SecShortcuts}" />
+                        <ItemsControl ItemsSource="{Binding Shortcuts}" Margin="0,8,0,0">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,3">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Style="{StaticResource FieldLabelStyle}" Text="{Binding Description}" Margin="0,0,12,0" />
+                                        <Border Grid.Column="1" Style="{StaticResource KeyChipStyle}">
+                                            <TextBlock Text="{Binding Keys}" Foreground="{StaticResource ForegroundBrush}" FontFamily="Consolas, Segoe UI" FontSize="11.5" />
+                                        </Border>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
 
-                <Grid Margin="0,0,0,10">
-                    <TextBlock Text="{loc:Loc MaxTokens}" Foreground="{StaticResource SecondaryForegroundBrush}" FontSize="12" />
-                    <TextBlock HorizontalAlignment="Right" Foreground="{StaticResource AccentBrush}" FontSize="12"
-                               Text="{Binding Value, ElementName=SMax, StringFormat=F0}" />
-                </Grid>
-                <Slider x:Name="SMax" Minimum="256" Maximum="8192" SmallChange="128" LargeChange="512"
-                        Value="{Binding MaxTokens, Mode=TwoWay}" Margin="0,0,0,14" />
+                <!-- ===== 정보 ===== -->
+                <Border Style="{StaticResource CardStyle}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SectionTitleStyle}" Text="{loc:Loc SecAbout}" />
+                        <Grid Margin="0,12,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Image Grid.Column="0" Source="pack://application:,,,/NvChat;component/Resources/brand.png" Width="44" Height="44" VerticalAlignment="Top" RenderOptions.BitmapScalingMode="HighQuality" />
+                            <StackPanel Grid.Column="1" Margin="14,0,0,0">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="NvChat" Foreground="{StaticResource ForegroundBrush}" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    <TextBlock Text="{Binding CurrentVersionText}" Foreground="{StaticResource MutedForegroundBrush}" FontSize="11.5" VerticalAlignment="Center" Margin="10,0,0,0" />
+                                </StackPanel>
+                                <TextBlock Style="{StaticResource HelpTextStyle}" Text="{loc:Loc AboutDescription}" Margin="0,4,0,0" />
+                            </StackPanel>
+                        </Grid>
 
-                <Grid Margin="0,0,0,10">
-                    <TextBlock Text="Frequency Penalty" Foreground="{StaticResource SecondaryForegroundBrush}" FontSize="12" />
-                    <TextBlock HorizontalAlignment="Right" Foreground="{StaticResource AccentBrush}" FontSize="12"
-                               Text="{Binding Value, ElementName=SFreq, StringFormat=F2}" />
-                </Grid>
-                <Slider x:Name="SFreq" Minimum="-2" Maximum="2" SmallChange="0.01" LargeChange="0.1"
-                        Value="{Binding FrequencyPenalty, Mode=TwoWay}" Margin="0,0,0,14" />
+                        <WrapPanel Margin="0,14,0,0">
+                            <Button Command="{Binding OpenGitHubCommand}" Padding="12,6" Margin="0,0,8,6">
+                                <StackPanel Orientation="Horizontal">
+                                    <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconGitHub}" Width="15" Height="15" />
+                                    <TextBlock Text="GitHub" Margin="7,0,0,0" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                            <Button Command="{Binding OpenDataFolderCommand}" Padding="12,6" Margin="0,0,8,6" ToolTip="{Binding DataFolder}">
+                                <StackPanel Orientation="Horizontal">
+                                    <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconFolder}" Width="15" Height="15" />
+                                    <TextBlock Text="{loc:Loc OpenDataFolder}" Margin="7,0,0,0" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                            <Button Command="{Binding CheckUpdateCommand}" Padding="12,6" Margin="0,0,8,6">
+                                <StackPanel Orientation="Horizontal">
+                                    <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconRefresh}" Width="15" Height="15" />
+                                    <TextBlock Text="{loc:Loc CheckNow}" Margin="7,0,0,0" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                        </WrapPanel>
+                        <TextBlock Text="{Binding UpdateStatus}" Foreground="{StaticResource SecondaryForegroundBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,2,0,0" />
 
-                <Grid Margin="0,0,0,10">
-                    <TextBlock Text="Presence Penalty" Foreground="{StaticResource SecondaryForegroundBrush}" FontSize="12" />
-                    <TextBlock HorizontalAlignment="Right" Foreground="{StaticResource AccentBrush}" FontSize="12"
-                               Text="{Binding Value, ElementName=SPres, StringFormat=F2}" />
-                </Grid>
-                <Slider x:Name="SPres" Minimum="-2" Maximum="2" SmallChange="0.01" LargeChange="0.1"
-                        Value="{Binding PresencePenalty, Mode=TwoWay}" />
+                        <CheckBox Content="{loc:Loc AutoCheckUpdates}" IsChecked="{Binding AutoCheckUpdates}" Margin="0,12,0,0" />
+                        <TextBlock Style="{StaticResource HelpTextStyle}" Text="{loc:Loc UpdateHelp}" Margin="0,8,0,0" />
+                    </StackPanel>
+                </Border>
 
             </StackPanel>
         </ScrollViewer>
@@ -206,7 +270,7 @@
         <Border Grid.Row="1" Background="{StaticResource PanelBackgroundBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0" Padding="20,12">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                 <Button Command="{Binding CancelCommand}" Content="{loc:Loc Cancel}" Padding="18,8" Margin="0,0,10,0" />
-                <Button Command="{Binding SaveCommand}" Style="{StaticResource AccentButtonStyle}" Content="{loc:Loc Save}" Padding="22,8" />
+                <Button Command="{Binding SaveCommand}" Style="{StaticResource AccentButtonStyle}" Content="{loc:Loc Save}" Padding="22,8" IsDefault="True" />
             </StackPanel>
         </Border>
     </Grid>

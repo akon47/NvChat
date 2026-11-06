@@ -13,7 +13,7 @@ Streaming chat · saved conversations · live markdown/code rendering · reasoni
 [![downloads](https://img.shields.io/github/downloads/akon47/NvChat/total?color=76B900)](https://github.com/akon47/NvChat/releases)
 [![stars](https://img.shields.io/github/stars/akon47/NvChat?style=flat&color=76B900)](https://github.com/akon47/NvChat/stargazers)
 [![license](https://img.shields.io/github/license/akon47/NvChat)](LICENSE)
-![.NET](https://img.shields.io/badge/.NET-8.0-512BD4)
+![.NET](https://img.shields.io/badge/.NET-10.0-512BD4)
 ![platform](https://img.shields.io/badge/platform-Windows-0078D6)
 
 <img src="docs/screenshot.png" alt="NvChat screenshot" width="880">
@@ -45,10 +45,11 @@ Streaming chat · saved conversations · live markdown/code rendering · reasoni
 - **Conversation management** — sidebar **search**, **date groups** (Today/Yesterday/…), **pin**, **rename**, autosave, model-generated **auto titles**
 - **Per-conversation settings** — system prompt, Temperature/Top P/Max Tokens/Penalties
 - **Export** — copy the whole conversation or save as Markdown
-- **Quality of life** — scroll-to-bottom button, remembers window size/position, collapsible sidebar, keyboard shortcuts
+- **Image paste & drop** — paste a screenshot with `Ctrl+V` or drop image files anywhere in the chat area
+- **Quality of life** — right-click menu on conversations (pin · rename · delete), toast feedback for copy/export, dismissible status banner, scroll-to-bottom button, remembers window size/position, collapsible sidebar, a full set of keyboard shortcuts (listed in Settings), first-time tray hint, periodic update checks
 - **Safe storage** — API key encrypted with Windows DPAPI, atomic file writes + automatic backup of corrupt files
 - **Multi-language** — English & Korean UI, switchable in Settings (defaults to your Windows language on first run)
-- **UI** — custom borderless dark theme with an NVIDIA-green accent; ChatGPT/Claude-style layout (bubble only on your messages)
+- **UI** — custom dark title bar with DWM rounded corners, Windows 11 snap layouts and a keyboard focus ring; NVIDIA-green accent; ChatGPT/Claude-style layout (bubble only on your messages); themed dialogs and menus throughout
 
 ## 📦 Download
 
@@ -73,7 +74,17 @@ It's a self-contained single file that runs even without the .NET runtime instal
 |---|---|
 | `Enter` | Send (switchable to `Ctrl+Enter` in Settings) |
 | `Shift+Enter` | New line |
+| `Ctrl+V` | Paste an image from the clipboard (you can also drop image files onto the chat) |
+| `Esc` | Stop generating |
 | `Ctrl+N` | New conversation |
+| `Ctrl+F` | Search conversations |
+| `F2` | Rename the selected conversation |
+| `Ctrl+B` | Toggle sidebar |
+| `Ctrl+M` | Open the model picker |
+| `Ctrl+R` | Regenerate the last response |
+| `Ctrl+Shift+C` | Copy the whole conversation |
+| `Ctrl+E` | Export as Markdown |
+| `Ctrl+,` | Settings |
 | `Ctrl+Shift+Space` | Quick chat from anywhere (global · configurable) |
 
 ## 🛠️ Build from source
@@ -84,10 +95,10 @@ dotnet run --project NvChat/NvChat.csproj
 
 # Build the single-file release exe
 dotnet publish NvChat/NvChat.csproj -c Release
-# → NvChat/bin/Release/net8.0-windows/win-x64/publish/NvChat.exe
+# → NvChat/bin/Release/net10.0-windows/win-x64/publish/NvChat.exe
 ```
 
-Requires the .NET 8 SDK (Windows).
+Requires the .NET 10 SDK (Windows).
 
 ## 🚀 Releases (automated)
 
@@ -102,7 +113,7 @@ git push origin v1.0.0
 
 ## 🧩 Tech
 
-.NET 8 / WPF (`net8.0-windows`), MVVM, a custom `WindowView` (borderless WindowChrome), a dark palette, and a
+.NET 10 / WPF (`net10.0-windows`), MVVM with the CommunityToolkit.Mvvm source generators (no code-behind event handlers — attached behaviors instead), a custom `WindowView` (WindowChrome dark title bar with DWM rounded corners and Windows 11 snap layouts), a dark palette, and a
 self-written markdown renderer + syntax highlighter — no external UI libraries.
 
 - Endpoint: `https://integrate.api.nvidia.com/v1` (OpenAI-compatible, configurable in Settings)
