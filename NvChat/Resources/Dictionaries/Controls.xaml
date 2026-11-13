@@ -644,19 +644,27 @@
                     <Border x:Name="Bd" Background="Transparent" CornerRadius="6" Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True">
                         <Grid>
                             <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <ContentPresenter Grid.Column="0" ContentSource="Header" VerticalAlignment="Center" RecognizesAccessKey="True" />
-                            <TextBlock x:Name="Gesture" Grid.Column="1" Text="{TemplateBinding InputGestureText}" Foreground="{DynamicResource MutedForegroundBrush}" FontSize="11.5" Margin="24,0,0,0" VerticalAlignment="Center" />
+                            <!-- 아이콘: MenuItem.Icon 에 Icons.xaml 의 지오메트리를 주면 그려진다(없으면 칸 자체가 사라진다). -->
+                            <Path x:Name="IconPath" Grid.Column="0" Data="{Binding Icon, RelativeSource={RelativeSource TemplatedParent}}" Width="15" Height="15" Stretch="Uniform"
+                                  Fill="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,11,0" VerticalAlignment="Center" SnapsToDevicePixels="True" />
+                            <ContentPresenter Grid.Column="1" ContentSource="Header" VerticalAlignment="Center" RecognizesAccessKey="True" />
+                            <TextBlock x:Name="Gesture" Grid.Column="2" Text="{TemplateBinding InputGestureText}" Foreground="{DynamicResource MutedForegroundBrush}" FontSize="11.5" Margin="24,0,0,0" VerticalAlignment="Center" />
                         </Grid>
                     </Border>
                     <ControlTemplate.Triggers>
+                        <Trigger Property="Icon" Value="{x:Null}">
+                            <Setter TargetName="IconPath" Property="Visibility" Value="Collapsed" />
+                        </Trigger>
                         <Trigger Property="InputGestureText" Value="">
                             <Setter TargetName="Gesture" Property="Visibility" Value="Collapsed" />
                         </Trigger>
                         <Trigger Property="IsHighlighted" Value="True">
                             <Setter TargetName="Bd" Property="Background" Value="{DynamicResource OverlayHoverBrush}" />
+                            <Setter TargetName="IconPath" Property="Fill" Value="{DynamicResource ForegroundBrush}" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter Property="Foreground" Value="{DynamicResource MutedForegroundBrush}" />

@@ -6,8 +6,6 @@
     <RootNamespace>NvChat</RootNamespace>
     <AssemblyName>NvChat</AssemblyName>
     <UseWPF>true</UseWPF>
-    <!-- 트레이 아이콘(NotifyIcon)만 WinForms 에서 빌려 쓴다. -->
-    <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <!-- preview: CommunityToolkit.Mvvm 8.4 가 partial property 에 [ObservableProperty] 를 생성하려면 C# preview(field 키워드)가 필요하다.
@@ -18,11 +16,9 @@
     <AssemblyTitle>NvChat</AssemblyTitle>
     <Product>NvChat</Product>
     <Company>NvChat</Company>
-    <Version>1.9.0</Version>
+    <Version>1.9.1</Version>
     <NeutralLanguage>ko-KR</NeutralLanguage>
     <ApplicationIcon>Resources\app.ico</ApplicationIcon>
-    <!-- WPF 는 app.manifest 의 PerMonitorV2 를 사용. WinForms(트레이용) 활성화로 뜨는 DPI 경고(WFAC010/WFO0003)만 억제. -->
-    <NoWarn>$(NoWarn);WFAC010;WFO0003</NoWarn>
   </PropertyGroup>
 
   <!-- RID 는 restore 를 위해 항상 지정하되, Debug 내부 루프는 프레임워크 의존(가볍게)으로 둔다. -->
@@ -57,14 +53,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- UseWindowsForms 가 끼워 넣는 암시적 using(System.Drawing / System.Windows.Forms)은 WPF 타입(Button, Color, KeyEventArgs…)과 충돌하므로 뺀다.
-         트레이(TrayService)만 WinForms 를 별칭으로 명시적으로 쓴다. -->
-    <Using Remove="System.Drawing" />
-    <Using Remove="System.Windows.Forms" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <!-- 트레이/창 아이콘을 스트림으로 로드하기 위해 리소스로도 포함(ApplicationIcon 과 별개). -->
+    <!-- 트레이/창 아이콘을 바이트로 읽어 쓰기 위해 리소스로도 포함(ApplicationIcon 과 별개). -->
     <Resource Include="Resources\app.ico" />
     <!-- 인앱 브랜드 마크(타이틀바/빈 상태) -->
     <Resource Include="Resources\brand.png" />

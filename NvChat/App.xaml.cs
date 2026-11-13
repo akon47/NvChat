@@ -96,6 +96,7 @@ public partial class App : Application
             _tray.OpenRequested += ShowMain;
             _tray.QuickChatRequested += ShowQuick;
             _tray.NewChatRequested += OnTrayNewChat;
+            _tray.SettingsRequested += OpenSettings;
             _tray.ExitRequested += RequestExit;
 
             _hotKey = new HotKeyService();
@@ -340,6 +341,23 @@ public partial class App : Application
         if (theme is not null) ThemeManager.Instance.Apply(theme);
         if (double.TryParse(ArgValue(args, "--scale"), System.Globalization.CultureInfo.InvariantCulture, out double scale)) ThemeManager.Instance.Scale = scale;
 
+        // 트레이 메뉴 견본: 메뉴만 띄워 한 줄을 강조한 상태로 저장한다. --page tray [--hover n]
+        if (page == "tray")
+        {
+            _ = Dispatcher.InvokeAsync(async () =>
+            {
+                try
+                {
+                    await RenderTrayMenuAsync(output, int.TryParse(ArgValue(args, "--hover"), out int hovered) ? hovered : 1);
+                }
+                finally
+                {
+                    Shutdown();
+                }
+            });
+            return true;
+        }
+
         Window window = page switch
         {
             "settings" => new SettingsWindow
@@ -468,6 +486,25 @@ public partial class App : Application
         menu.PlacementTarget = row;
         menu.IsOpen = true;
         await Task.Delay(500);
+        RenderToPng(menu, output);
+        menu.IsOpen = false;
+    }
+
+    /// <summary>트레이 메뉴를 열어 index 번째 줄을 강조(키보드 포커스)한 상태로 렌더한다.</summary>
+    private static async Task RenderTrayMenuAsync(string output, int index)
+    {
+        var menu = TrayService.CreatePreviewMenu();
+        menu.Placement = System.Windows.Controls.Primitives.PlacementMode.AbsolutePoint;
+        menu.HorizontalOffset = 200;
+        menu.VerticalOffset = 200;
+        menu.IsOpen = true;
+        await Task.Delay(400);
+
+        // 마우스를 올린 상태(IsHighlighted)는 실제 포인터 없이는 생기지 않는다. 견본에서는 그 속성을 직접 켜서 호버 모양을 확인한다.
+        if (index >= 0 && index < menu.Items.Count && menu.Items[index] is MenuItem item)
+            typeof(MenuItem).GetProperty(nameof(MenuItem.IsHighlighted))?.SetValue(item, true);
+        await Task.Delay(300);
+
         RenderToPng(menu, output);
         menu.IsOpen = false;
     }
