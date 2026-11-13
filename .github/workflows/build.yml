@@ -22,3 +22,8 @@ jobs:
       # (별도 restore + --no-restore 로 나누면 런타임 팩이 복원되지 않아 실패한다.)
       - name: Build (Release)
         run: dotnet build NvChat/NvChat.csproj -c Release
+
+      # 단위 테스트(마크다운 분할·구문 강조·제목 정리·<think> 분리·컨텍스트 계산·링크 검증 등 순수 로직).
+      # 테스트는 앱 어셈블리를 참조만 하므로 가벼운 Debug 구성으로 돌린다.
+      - name: Test
+        run: dotnet test NvChat.Tests/NvChat.Tests.csproj -c Debug --nologo

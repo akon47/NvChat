@@ -12,6 +12,9 @@ public sealed class AppSettings
     public const string DefaultBaseUrl = "https://integrate.api.nvidia.com/v1";
     public const string DefaultHotkey = "Ctrl+Shift+Space";
 
+    /// <summary>전역 단축키를 끈 상태의 저장값. (표시 문구는 언어별로 번역하되 저장값은 언어와 무관해야 한다)</summary>
+    public const string HotkeyOff = "Off";
+
     /// <summary>build.nvidia.com 에서 발급받은 API 키(nvapi-...). 메모리 상에서는 평문.</summary>
     public string? ApiKey { get; set; }
 
@@ -62,6 +65,30 @@ public sealed class AppSettings
     /// <summary>UI 표시 언어(컬처 코드, 예: "en-US" / "ko-KR"). 비어 있으면 첫 실행 시 OS 언어로 결정.</summary>
     public string Language { get; set; } = "";
 
+    // ===== 모양 =====
+
+    /// <summary>테마: System(윈도우 설정을 따름) / Dark / Light / HighContrast.</summary>
+    public string Theme { get; set; } = "System";
+
+    /// <summary>본문 확대 배율(1.0 = 100%). Ctrl+= / Ctrl+- / Ctrl+0 으로도 바꾼다.</summary>
+    public double UiScale { get; set; } = 1.0;
+
+    /// <summary>사이드바 폭(DIP)과 접힘 상태.</summary>
+    public double SidebarWidth { get; set; } = 280;
+
+    public bool SidebarCollapsed { get; set; }
+
+    // ===== 동작 =====
+
+    /// <summary>입력 컨텍스트 한도(추정 토큰). 넘으면 오래된 메시지부터 전송에서 뺀다. 0 이면 제한 없음.</summary>
+    public int ContextTokenLimit { get; set; } = 32000;
+
+    /// <summary>창이 가려져 있거나 숨겨진 동안 응답이 끝나면 알림을 띄울지.</summary>
+    public bool NotifyOnComplete { get; set; } = true;
+
+    /// <summary>윈도우 로그인 시 트레이로 자동 시작할지.</summary>
+    public bool StartWithWindows { get; set; }
+
     /// <summary>메인 창 위치/크기 기억값. null 이면 기본 위치(화면 중앙).</summary>
     public WindowPlacement? Window { get; set; }
 
@@ -90,6 +117,25 @@ public sealed class AppSettings
         WindowLeft = WindowTop = WindowWidth = WindowHeight = null;
         WindowMaximized = false;
     }
+
+    public AppSettings Clone() => (AppSettings)MemberwiseClone();
+
+    /// <summary>손으로 고친 파일이나 이전 버전의 값을 유효 범위로 맞춘다.</summary>
+    public void Normalize()
+    {
+        // 1.8 까지는 꺼짐을 번역된 표시 문구("끄기")로 저장했다. 언어와 무관한 값으로 바꾼다.
+        GlobalHotkey = Services.HotKeyService.Normalize(GlobalHotkey);
+
+        if (!Services.ThemeNames.All.Contains(Theme)) Theme = Services.ThemeNames.System;
+        if (!double.IsFinite(UiScale) || UiScale <= 0) UiScale = 1.0;
+        UiScale = Math.Clamp(UiScale, Services.ThemeManager.MinScale, Services.ThemeManager.MaxScale);
+        if (!double.IsFinite(SidebarWidth)) SidebarWidth = 280;
+        SidebarWidth = Math.Clamp(SidebarWidth, MinSidebarWidth, MaxSidebarWidth);
+        if (ContextTokenLimit < 0) ContextTokenLimit = 0;
+    }
+
+    public const double MinSidebarWidth = 220;
+    public const double MaxSidebarWidth = 460;
 
     public static List<PromptPreset> DefaultPresets()
     {

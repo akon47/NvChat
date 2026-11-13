@@ -6,6 +6,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
+using NvChat.Behaviors;
 using NvChat.Localization;
 using NvChat.Services;
 using NvChat.ViewModels;
@@ -15,7 +16,8 @@ namespace NvChat;
 
 /// <summary>
 /// 합성 루트. 단일 인스턴스 / 트레이 / 전역 단축키 / 창 간 배선(설정·확인 대화상자·닫기 정책) / 전역 예외 처리 / 주기적 업데이트 확인을 맡는다.
-/// 개발·검증용으로 <c>--screenshot &lt;png&gt; [--page main|settings|quick|dialog|menu]</c> 모드를 제공한다(창을 렌더해 PNG 로 저장하고 종료).
+/// 개발·검증용으로 <c>--screenshot &lt;png&gt; [--page main|settings|quick|dialog|menu] [--theme Dark|Light|HighContrast] [--scale 1.25] [--size 900x700] [--state advanced,find,…] [--tab n]</c>
+/// 모드를 제공한다(창을 렌더해 PNG 로 저장하고 종료).
 /// </summary>
 public partial class App : Application
 {
@@ -35,6 +37,7 @@ public partial class App : Application
     private RegisteredWaitHandle? _showWait;
     private DispatcherTimer? _updateTimer;
     private bool _exiting;
+    private bool _loadStarted;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -44,6 +47,12 @@ public partial class App : Application
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
         AppDomain.CurrentDomain.UnhandledException += (_, args) => Log("domain", args.ExceptionObject as Exception);
         DispatcherUnhandledException += OnDispatcherUnhandledException;
+        // 기다리지 않고 흘려보낸 작업(_ = FooAsync())에서 난 예외. 앱은 계속 가지만 원인을 찾을 수 있게 기록은 남긴다.
+        TaskScheduler.UnobservedTaskException += (_, args) =>
+        {
+            Log("task", args.Exception);
+            args.SetObserved();
+        };
 
         if (TryHandleScreenshot(e.Args)) return;
 
@@ -70,11 +79,17 @@ public partial class App : Application
             _viewModel.SettingsRequested += (_, _) => OpenSettings();
             _viewModel.SettingsChanged += (_, _) => RegisterHotKey();
             _viewModel.RequestExitForUpdate += (_, _) => RequestExit(); // 업데이트를 적용하면 새 버전이 이미 떠 있으므로 완전히 종료한다.
+            _viewModel.ResponseCompleted += OnResponseCompleted;
             _viewModel.ConfirmCallback = (title, message, confirmText) => MessageDialog.Confirm(ActiveWindow, title, message, confirmText);
 
             _mainWindow = new MainWindow { DataContext = _viewModel };
             _mainWindow.Closing += OnMainWindowClosing;
-            _mainWindow.Loaded += async (_, _) => await _viewModel.LoadAsync();
+            _mainWindow.Loaded += async (_, _) =>
+            {
+                if (_loadStarted) return;
+                _loadStarted = true;
+                await _viewModel.LoadAsync();
+            };
             MainWindow = _mainWindow;
 
             _tray = new TrayService();
@@ -90,7 +105,19 @@ public partial class App : Application
             _updateTimer = new DispatcherTimer(UpdateCheckInterval, DispatcherPriority.Background, (_, _) => _ = _viewModel.CheckForUpdateAsync(), Dispatcher);
             _updateTimer.Start();
 
-            _mainWindow.Show();
+            // 자동 시작을 켜 둔 경우 실행 파일을 옮겼어도 경로가 맞도록 다시 써 둔다.
+            if (_viewModel.GetCurrentSettings().StartWithWindows) AutoStartService.Apply(true);
+
+            // 윈도우 로그인으로 자동 시작됐으면 창 없이 트레이로만 뜬다. (창이 Loaded 되지 않으므로 로드는 직접 시작한다)
+            if (e.Args.Contains(AutoStartService.StartHiddenArgument))
+            {
+                _loadStarted = true;
+                _ = _viewModel.LoadAsync();
+            }
+            else
+            {
+                _mainWindow.Show();
+            }
         }
         catch (Exception ex)
         {
@@ -109,6 +136,7 @@ public partial class App : Application
     {
         if (_mainWindow is null) return;
 
+        _viewModel?.RefreshDateGroups();
         if (!_mainWindow.IsVisible) _mainWindow.Show();
         if (_mainWindow.WindowState == WindowState.Minimized) _mainWindow.WindowState = WindowState.Normal;
 
@@ -169,16 +197,38 @@ public partial class App : Application
     {
         if (_viewModel is null) return;
 
-        SettingsViewModel settingsViewModel = new(_viewModel.GetCurrentSettings());
+        SettingsViewModel settingsViewModel = new(_viewModel.GetCurrentSettings(), _viewModel.GetModelIds());
         SettingsWindow window = new() { DataContext = settingsViewModel };
         if (_mainWindow is { IsVisible: true }) window.Owner = _mainWindow;
         else window.WindowStartupLocation = WindowStartupLocation.CenterScreen;
+
+        // 설정 창이 떠 있는 동안에는 전역 단축키를 풀어 둔다. 단축키 칸에 지금 쓰는 조합을 다시 눌러도 가로채이지 않고 입력된다.
+        _hotKey?.Unregister();
         window.ShowDialog();
 
-        if (settingsViewModel.Saved) _viewModel.ApplySettings(settingsViewModel.BuildSettings());
-        else settingsViewModel.RevertLanguage();
+        if (settingsViewModel.Saved)
+        {
+            _viewModel.ApplySettings(settingsViewModel.BuildSettings()); // SettingsChanged → RegisterHotKey
+        }
+        else
+        {
+            settingsViewModel.RevertPreview();
+            RegisterHotKey();
+        }
 
         if (settingsViewModel.FoundUpdate is { } update) _viewModel.OfferUpdate(update);
+    }
+
+    /// <summary>
+    /// 응답이 끝났는데 사용자가 보고 있지 않으면(창이 숨겨졌거나 다른 앱이 앞에 있으면) 알린다.
+    /// 긴 답변을 걸어 두고 다른 일을 하다가 끝난 줄 모르고 지나치지 않도록.
+    /// </summary>
+    private void OnResponseCompleted(string title, string preview)
+    {
+        if (Windows.OfType<Window>().Any(w => w.IsActive)) return;
+
+        _tray?.ShowBalloon(title, preview);
+        if (_mainWindow is { IsVisible: true }) WindowBehaviors.Flash(_mainWindow);
     }
 
     private void RegisterHotKey()
@@ -215,6 +265,15 @@ public partial class App : Application
 
         _quickWindow?.CloseForReal();
         if (_mainWindow is { IsLoaded: true }) _mainWindow.Close(); // 창 위치 저장(WindowBehaviors)은 Closing 에서 처리된다
+
+        // 스트림 취소로 마무리되는 대화까지 포함해, 백그라운드 저장이 디스크에 내려간 뒤 끝낸다.
+        try
+        {
+            _viewModel?.SaveState();
+            _viewModel?.FlushStorage();
+        }
+        catch { /* 종료 중 저장 실패는 무시 */ }
+
         Shutdown();
     }
 
@@ -254,7 +313,7 @@ public partial class App : Application
     // ===== 스크린샷 모드(UI 검증용) =====
 
     /// <summary>
-    /// <c>--screenshot &lt;png&gt; [--page main|settings|quick|dialog|menu]</c>: 해당 창을 띄워 렌더링한 뒤 PNG 로 저장하고 종료한다.
+    /// <c>--screenshot &lt;png&gt; [--page …] [--theme …] [--scale …] [--size WxH] [--state …] [--tab n]</c>: 해당 창을 띄워 렌더링한 뒤 PNG 로 저장하고 종료한다.
     /// 사람이 보지 않고도(에이전트·CI) UI 변경을 확인하기 위한 개발용 모드. 바인딩 오류는 <c>&lt;png&gt;.binding.log</c> 에 남긴다. 처리했으면 true.
     /// </summary>
     private bool TryHandleScreenshot(string[] args)
@@ -263,17 +322,30 @@ public partial class App : Application
         if (si < 0 || si + 1 >= args.Length) return false;
 
         string output = Path.GetFullPath(args[si + 1]);
-        int pi = Array.IndexOf(args, "--page");
-        string page = pi >= 0 && pi + 1 < args.Length ? args[pi + 1] : "main";
+        string page = ArgValue(args, "--page") ?? "main";
+        string? theme = ArgValue(args, "--theme");
+        string[] states = (ArgValue(args, "--state") ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
         PresentationTraceSources.Refresh();
         PresentationTraceSources.DataBindingSource.Listeners.Add(new TextWriterTraceListener(output + ".binding.log"));
         PresentationTraceSources.DataBindingSource.Switch.Level = SourceLevels.Warning;
 
         MainViewModel viewModel = new();
+
+        // 가짜 서버로 전송 경로까지 확인할 때: --api-key x --base-url http://127.0.0.1:8765/v1 --send "질문" --delay 6000
+        if (ArgValue(args, "--api-key") is { } apiKey) viewModel.GetCurrentSettings().ApiKey = apiKey;
+        if (ArgValue(args, "--base-url") is { } baseUrl) viewModel.GetCurrentSettings().BaseUrl = baseUrl;
+        int delay = int.TryParse(ArgValue(args, "--delay"), out int customDelay) ? customDelay : 2500;
+
+        if (theme is not null) ThemeManager.Instance.Apply(theme);
+        if (double.TryParse(ArgValue(args, "--scale"), System.Globalization.CultureInfo.InvariantCulture, out double scale)) ThemeManager.Instance.Scale = scale;
+
         Window window = page switch
         {
-            "settings" => new SettingsWindow { DataContext = new SettingsViewModel(viewModel.GetCurrentSettings()) },
+            "settings" => new SettingsWindow
+            {
+                DataContext = new SettingsViewModel(viewModel.GetCurrentSettings(), viewModel.GetModelIds()) { SelectedTabIndex = int.TryParse(ArgValue(args, "--tab"), out int tab) ? tab : 0 },
+            },
             "quick" => new QuickChatWindow { DataContext = viewModel },
             "dialog" => new MessageDialog
             {
@@ -290,13 +362,29 @@ public partial class App : Application
         };
         window.WindowStartupLocation = WindowStartupLocation.CenterScreen;
         window.Show();
-        if (page is "main" or "quick" or "menu") _ = viewModel.LoadAsync();
+
+        // 저장된 창 크기 복원(SourceInitialized) 뒤에 적용되도록 Show 다음에 맞춘다.
+        if (ArgValue(args, "--size")?.Split('x') is [var w, var h] && double.TryParse(w, out double width) && double.TryParse(h, out double height))
+        {
+            window.WindowState = WindowState.Normal;
+            window.Width = width;
+            window.Height = height;
+        }
+
+        if (page is "main" or "quick" or "menu") _ = LoadForScreenshotAsync(viewModel, states, ArgValue(args, "--select"), ArgValue(args, "--send"), ArgValue(args, "--then"));
 
         _ = Dispatcher.InvokeAsync(async () =>
         {
-            await Task.Delay(2500); // 모델 목록 조회·애니메이션이 안정될 때까지
+            await Task.Delay(delay); // 모델 목록 조회·애니메이션이 안정될 때까지
             try
             {
+                // 목록 맨 위를 찍고 싶을 때: --state top
+                if (states.Contains("top"))
+                {
+                    foreach (var viewer in FindDescendants<ScrollViewer>(window).Where(v => v.ScrollableHeight > 0)) viewer.ScrollToTop();
+                    await Task.Delay(700);
+                }
+
                 if (page == "menu") await RenderConversationMenuAsync(window, output);
                 else RenderToPng(window, output);
             }
@@ -307,6 +395,69 @@ public partial class App : Application
             }
         });
         return true;
+    }
+
+    private static string? ArgValue(string[] args, string name)
+    {
+        int index = Array.IndexOf(args, name);
+        return index >= 0 && index + 1 < args.Length ? args[index + 1] : null;
+    }
+
+    /// <summary>스크린샷용 상태를 만든다: <c>--state advanced,find,collapsed,toast,banner,top</c>, <c>--select 제목일부</c>.</summary>
+    private static async Task LoadForScreenshotAsync(MainViewModel viewModel, string[] states, string? selectTitle, string? send, string? then)
+    {
+        try
+        {
+            await viewModel.LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            Log("screenshot", ex); // 로드가 실패하면 빈 화면만 찍히므로 원인을 남긴다
+            throw;
+        }
+
+        if (selectTitle is not null && viewModel.Conversations.FirstOrDefault(c => c.Title.Contains(selectTitle, StringComparison.OrdinalIgnoreCase)) is { } selected)
+            viewModel.SelectedConversation = selected;
+
+        foreach (string state in states)
+        {
+            switch (state)
+            {
+                case "advanced": viewModel.IsAdvancedOpen = true; break;
+                case "collapsed": viewModel.IsSidebarCollapsed = true; break;
+                case "new": viewModel.NewConversationCommand.Execute(null); break;
+                case "regen": viewModel.RegenerateLastCommand.Execute(null); break;
+                case "toast": viewModel.ShowToast("Sample toast", "Undo", () => { }); break;
+                case "banner": viewModel.StatusMessage = "Sample status banner message."; break;
+                case "find":
+                    viewModel.OpenFindCommand.Execute(null);
+                    viewModel.FindText = "the";
+                    break;
+            }
+        }
+
+        if (send is not null)
+        {
+            viewModel.InputText = send;
+            viewModel.SendCommand.Execute(null);
+        }
+
+        // 응답을 받은 뒤 이어서 할 동작: --then regen,prev,next,delete,undo,stop (각 동작 사이에 잠깐 기다린다)
+        foreach (string action in (then ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            await Task.Delay(1500);
+            var last = viewModel.SelectedConversation?.Messages.LastOrDefault();
+            switch (action)
+            {
+                case "regen": viewModel.RegenerateLastCommand.Execute(null); break;
+                case "prev": viewModel.PreviousVariantCommand.Execute(last); break;
+                case "next": viewModel.NextVariantCommand.Execute(last); break;
+                case "delete": viewModel.DeleteMessageCommand.Execute(last); break;
+                case "undo": viewModel.InvokeToastActionCommand.Execute(null); break;
+                case "stop": viewModel.StopCommand.Execute(null); break;
+                case "retry": viewModel.RetryCommand.Execute(null); break;
+            }
+        }
     }
 
     /// <summary>사이드바 첫 대화의 우클릭 메뉴를 열어 렌더한다(메뉴/구분선 스타일 검증용).</summary>

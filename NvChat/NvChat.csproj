@@ -10,14 +10,15 @@
     <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <!-- preview: CommunityToolkit.Mvvm 8.4 가 partial property 에 [ObservableProperty] 를 생성하려면 C# preview(field 키워드)가 필요하다. -->
+    <!-- preview: CommunityToolkit.Mvvm 8.4 가 partial property 에 [ObservableProperty] 를 생성하려면 C# preview(field 키워드)가 필요하다.
+         (.NET 10 SDK 의 기본 언어 버전으로는 생성기가 partial property 구현을 내지 않는다 — 빼면 빌드가 깨진다.) -->
     <LangVersion>preview</LangVersion>
     <Deterministic>true</Deterministic>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AssemblyTitle>NvChat</AssemblyTitle>
     <Product>NvChat</Product>
     <Company>NvChat</Company>
-    <Version>1.8.0</Version>
+    <Version>1.9.0</Version>
     <NeutralLanguage>ko-KR</NeutralLanguage>
     <ApplicationIcon>Resources\app.ico</ApplicationIcon>
     <!-- WPF 는 app.manifest 의 PerMonitorV2 를 사용. WinForms(트레이용) 활성화로 뜨는 DPI 경고(WFAC010/WFO0003)만 억제. -->
@@ -43,6 +44,11 @@
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 순수 로직(마크다운 분할·제목 정리·컨텍스트 계산 등)은 internal 로 두고 테스트 프로젝트에만 연다. -->
+    <InternalsVisibleTo Include="NvChat.Tests" />
+  </ItemGroup>
 
   <ItemGroup>
     <!-- MVVM 소스 생성기([ObservableProperty]/[RelayCommand]). 순수 관리형이라 단일 exe 에 문제없이 포함된다. -->

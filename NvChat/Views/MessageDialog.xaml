@@ -28,9 +28,9 @@
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
-            <Path Grid.Column="0" Data="{StaticResource IconAlert}" Width="22" Height="22" Stretch="Uniform" Fill="{StaticResource ErrorBrush}" VerticalAlignment="Top" Margin="0,0,14,0"
+            <Path Grid.Column="0" Data="{StaticResource IconAlert}" Width="22" Height="22" Stretch="Uniform" Fill="{DynamicResource ErrorBrush}" VerticalAlignment="Top" Margin="0,0,14,0"
                   Visibility="{Binding IsError, Converter={StaticResource BoolToVis}}" />
-            <TextBlock Grid.Column="1" Text="{Binding Message}" Foreground="{StaticResource ForegroundBrush}" TextWrapping="Wrap" FontSize="13.5" LineHeight="21" />
+            <TextBlock Grid.Column="1" Text="{Binding Message}" Foreground="{DynamicResource ForegroundBrush}" TextWrapping="Wrap" FontSize="13.5" LineHeight="21" />
         </Grid>
 
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,22,0,0">

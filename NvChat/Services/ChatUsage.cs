@@ -17,4 +17,13 @@ public readonly record struct ChatStreamDelta(string? Content, string? Reasoning
 public readonly record struct ChatCompletionOutcome(string Content, ChatUsage Usage);
 
 /// <summary>NVIDIA API 호출 실패 시 던져지는 예외.</summary>
-public sealed class NvidiaApiException(string message, Exception? innerException = null) : Exception(message, innerException);
+public sealed class NvidiaApiException(string message, Exception? innerException = null) : Exception(message, innerException)
+{
+    /// <summary>HTTP 상태 코드(연결 실패·스트림 중 오류 등 상태가 없으면 null).</summary>
+    public int? StatusCode { get; init; }
+
+    /// <summary>429 응답의 Retry-After(초). 없으면 null.</summary>
+    public int? RetryAfterSeconds { get; init; }
+
+    public bool IsRateLimited => StatusCode == 429;
+}

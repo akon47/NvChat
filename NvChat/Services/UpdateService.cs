@@ -99,13 +99,21 @@ public sealed class UpdateService
         await DownloadAsync(http, info.DownloadUrl, newPath, info.Size, progress, cancellationToken).ConfigureAwait(false);
         TrySetHidden(newPath, true);
 
-        // 2) 체크섬 검증 (릴리즈에 sha256 이 함께 올라온 경우)
-        if (!string.IsNullOrEmpty(info.ChecksumUrl)
-            && await TryReadChecksumAsync(http, info.ChecksumUrl, cancellationToken).ConfigureAwait(false) is { } expected
-            && !string.Equals(expected, ComputeSha256(newPath), StringComparison.OrdinalIgnoreCase))
+        // 2) 체크섬 검증. 릴리즈에 체크섬이 있는데 읽지 못했다면 "검증 안 함"이 아니라 "검증 실패"다 —
+        //    받은 파일이 온전한지 알 수 없는 채로 실행 파일을 바꿔치기하지 않는다.
+        if (!string.IsNullOrEmpty(info.ChecksumUrl))
         {
-            TryDelete(newPath);
-            throw new InvalidOperationException(LocalizationManager.Instance["UpdateChecksumMismatch"]);
+            string? expected = await TryReadChecksumAsync(http, info.ChecksumUrl, cancellationToken).ConfigureAwait(false);
+            if (expected is null)
+            {
+                TryDelete(newPath);
+                throw new InvalidOperationException(LocalizationManager.Instance["UpdateChecksumUnavailable"]);
+            }
+            if (!string.Equals(expected, ComputeSha256(newPath), StringComparison.OrdinalIgnoreCase))
+            {
+                TryDelete(newPath);
+                throw new InvalidOperationException(LocalizationManager.Instance["UpdateChecksumMismatch"]);
+            }
         }
 
         // 3) 교체: 실행 중인 exe 는 덮어쓸 수 없지만 이름은 바꿀 수 있다.
@@ -233,7 +241,7 @@ public sealed class UpdateService
             string text = await http.GetStringAsync(url, cancellationToken).ConfigureAwait(false);
             // "<sha256>  NvChat.exe" 형식의 첫 토큰만 쓴다.
             string? token = text.Split([' ', '\t', '\r', '\n'], StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
-            return token is { Length: 64 } ? token : null;
+            return token is { Length: 64 } && token.All(Uri.IsHexDigit) ? token : null;
         }
         catch { return null; }
     }

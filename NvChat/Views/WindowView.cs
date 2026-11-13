@@ -5,6 +5,7 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using CommunityToolkit.Mvvm.Input;
+using NvChat.Services;
 using NvChat.ViewModels;
 
 namespace NvChat.Views;
@@ -21,7 +22,7 @@ namespace NvChat.Views;
 /// </summary>
 public class WindowView : Window
 {
-    private const int BorderColorRef = 0x00363633; // BorderColor #333336 — COLORREF 는 0x00BBGGRR
+    private const int DefaultBorderColorRef = 0x00363633; // 다크 BorderColor #333336 — COLORREF 는 0x00BBGGRR
 
     private static readonly DependencyPropertyKey MinimizeCommandPropertyKey = DependencyProperty.RegisterReadOnly(
         nameof(MinimizeCommand), typeof(ICommand), typeof(WindowView), new FrameworkPropertyMetadata(null));
@@ -140,7 +141,18 @@ public class WindowView : Window
         ApplyDwmAttributes(new WindowInteropHelper(this).Handle);
         if (PresentationSource.FromVisual(this) is HwndSource source) source.AddHook(WndProc);
         UpdateContentMargin();
+
+        // 테마가 바뀌면 DWM 이 그리는 프레임(다크 모드 여부·테두리 색)도 다시 맞춘다.
+        ThemeManager.Instance.ThemeChanged += OnThemeChanged;
     }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        ThemeManager.Instance.ThemeChanged -= OnThemeChanged;
+        base.OnClosed(e);
+    }
+
+    private void OnThemeChanged() => ApplyDwmAttributes(new WindowInteropHelper(this).Handle);
 
     protected override void OnDpiChanged(DpiScale oldDpi, DpiScale newDpi)
     {
@@ -188,11 +200,11 @@ public class WindowView : Window
         if (hwnd == 0) return;
         try
         {
-            int on = 1;
+            int on = ThemeManager.Instance.IsDark ? 1 : 0;
             NativeMethods.DwmSetWindowAttribute(hwnd, NativeMethods.DwmwaUseImmersiveDarkMode, ref on, sizeof(int));
             int round = NativeMethods.DwmwcpRound;
             NativeMethods.DwmSetWindowAttribute(hwnd, NativeMethods.DwmwaWindowCornerPreference, ref round, sizeof(int));
-            int color = BorderColorRef;
+            int color = ThemeManager.ColorRef("BorderColor", DefaultBorderColorRef);
             NativeMethods.DwmSetWindowAttribute(hwnd, NativeMethods.DwmwaBorderColor, ref color, sizeof(int));
         }
         catch { /* DWM 미지원 환경은 무시. */ }

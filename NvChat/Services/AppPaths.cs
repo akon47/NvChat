@@ -13,7 +13,13 @@ internal static class AppPaths
 
     public static string SettingsFile => Path.Combine(DataDirectory, "settings.json");
 
-    public static string ConversationsFile => Path.Combine(DataDirectory, "conversations.json");
+    /// <summary>대화마다 한 파일({Id}.json)로 저장하는 폴더.</summary>
+    public static string ConversationsDirectory => Path.Combine(DataDirectory, "conversations");
+
+    /// <summary>1.8 까지 쓰던, 모든 대화를 담은 단일 파일. 첫 실행 때 폴더 방식으로 옮긴 뒤 <see cref="LegacyConversationsBackupFile"/> 로 남긴다.</summary>
+    public static string LegacyConversationsFile => Path.Combine(DataDirectory, "conversations.json");
+
+    public static string LegacyConversationsBackupFile => Path.Combine(DataDirectory, "conversations.legacy.json");
 
     public static string ErrorLogFile => Path.Combine(DataDirectory, "error.log");
 

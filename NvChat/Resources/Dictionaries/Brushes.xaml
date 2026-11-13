@@ -3,6 +3,9 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:popt="http://schemas.microsoft.com/winfx/2006/xaml/presentation/options"
     >
+    <!-- 여기의 브러시는 기본(다크) 팔레트로 만들어지고, 테마를 바꾸면 ThemeManager 가 같은 키의 브러시를 앱 리소스 최상위에 덮어쓴다.
+         그래서 XAML 에서는 브러시를 항상 DynamicResource 로 참조해야 테마 전환이 반영된다.
+         브러시 키 XBrush 는 색 키 XColor 에서 만들어진다(예외: AccentSoftBrush=AccentColor, OverlayHover/PressedBrush=OverlayColor). -->
     <ResourceDictionary.MergedDictionaries>
         <ResourceDictionary Source="pack://application:,,,/NvChat;component/Resources/Dictionaries/Colors.xaml" />
     </ResourceDictionary.MergedDictionaries>
@@ -42,8 +45,13 @@
 
     <SolidColorBrush x:Key="ScrollThumbBrush" popt:Freeze="True" Color="{StaticResource ScrollThumbColor}" />
     <SolidColorBrush x:Key="ScrollThumbHoverBrush" popt:Freeze="True" Color="{StaticResource ScrollThumbHoverColor}" />
-    <SolidColorBrush x:Key="OverlayHoverBrush" popt:Freeze="True" Opacity="0.08" Color="{StaticResource WhiteColor}" />
-    <SolidColorBrush x:Key="OverlayPressedBrush" popt:Freeze="True" Opacity="0.14" Color="{StaticResource WhiteColor}" />
+    <SolidColorBrush x:Key="OverlayHoverBrush" popt:Freeze="True" Opacity="0.08" Color="{StaticResource OverlayColor}" />
+    <SolidColorBrush x:Key="OverlayPressedBrush" popt:Freeze="True" Opacity="0.14" Color="{StaticResource OverlayColor}" />
     <SolidColorBrush x:Key="CloseHoverBrush" popt:Freeze="True" Color="{StaticResource CloseHoverColor}" />
+    <SolidColorBrush x:Key="FindHighlightBrush" popt:Freeze="True" Color="{StaticResource FindHighlightColor}" />
+    <SolidColorBrush x:Key="SyntaxKeywordBrush" popt:Freeze="True" Color="{StaticResource SyntaxKeywordColor}" />
+    <SolidColorBrush x:Key="SyntaxStringBrush" popt:Freeze="True" Color="{StaticResource SyntaxStringColor}" />
+    <SolidColorBrush x:Key="SyntaxCommentBrush" popt:Freeze="True" Color="{StaticResource SyntaxCommentColor}" />
+    <SolidColorBrush x:Key="SyntaxNumberBrush" popt:Freeze="True" Color="{StaticResource SyntaxNumberColor}" />
 
 </ResourceDictionary>

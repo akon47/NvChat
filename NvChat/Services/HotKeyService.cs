@@ -1,9 +1,14 @@
 using System.Runtime.InteropServices;
+using System.Windows.Input;
 using System.Windows.Interop;
+using NvChat.Models;
 
 namespace NvChat.Services;
 
-/// <summary>전역 단축키를 등록하고 눌렸을 때 이벤트를 발생시킨다. (메시지 전용 창 사용)</summary>
+/// <summary>
+/// 전역(시스템 전체) 단축키 등록. "Ctrl+Shift+Space" 같은 문자열을 받아 RegisterHotKey 로 건다.
+/// 메시지 전용 창(HwndSource)으로 WM_HOTKEY 를 받아 이벤트로 올린다.
+/// </summary>
 public sealed class HotKeyService : IDisposable
 {
     private const int WmHotKey = 0x0312;
@@ -21,11 +26,12 @@ public sealed class HotKeyService : IDisposable
 
     public event Action? HotKeyPressed;
 
-    /// <summary>단축키 문자열("Ctrl+Alt+Space")을 등록한다. 실패/끄기면 false.</summary>
+    /// <summary>단축키를 (다시) 등록한다. 꺼짐이거나 다른 앱이 이미 쓰는 조합이면 false.</summary>
     public bool Register(string? hotkey)
     {
         Unregister();
         if (!TryParse(hotkey, out uint mods, out uint vk)) return false;
+
         _registered = RegisterHotKey(_source.Handle, HotKeyId, mods | ModNoRepeat, vk);
         return _registered;
     }
@@ -48,13 +54,17 @@ public sealed class HotKeyService : IDisposable
     }
 
     /// <summary>
-    /// 전역 단축키가 '끄기(비활성)' 상태인지. 언어별 "끄기" 라벨과 무관하게 인식하도록
-    /// 알려진 off 라벨(영어 Off / 한국어 끄기 / off / none)과 빈 값을 모두 처리한다.
+    /// 단축키가 꺼진 값인지. 저장값은 언어와 무관한 <see cref="AppSettings.HotkeyOff"/> 이지만,
+    /// 1.8 까지는 번역된 표시 문구("끄기")를 그대로 저장했으므로 그것도 꺼짐으로 읽는다.
     /// </summary>
     public static bool IsDisabled(string? hotkey) =>
         string.IsNullOrWhiteSpace(hotkey)
-        || hotkey.Trim() is var n && (n.Equals("Off", StringComparison.OrdinalIgnoreCase) || n.Equals("none", StringComparison.OrdinalIgnoreCase) || n == "끄기");
+        || hotkey.Trim() is var n && (n.Equals(AppSettings.HotkeyOff, StringComparison.OrdinalIgnoreCase) || n.Equals("none", StringComparison.OrdinalIgnoreCase) || n == "끄기");
 
+    /// <summary>저장할 값으로 정규화한다. 꺼짐은 항상 <see cref="AppSettings.HotkeyOff"/>.</summary>
+    public static string Normalize(string? hotkey) => IsDisabled(hotkey) ? AppSettings.HotkeyOff : hotkey!.Trim();
+
+    /// <summary>"Ctrl+Shift+Space" → (수식키 플래그, 가상 키). 수식키가 하나도 없으면 전역 단축키로 쓰지 않는다(일반 타이핑을 가로채므로).</summary>
     public static bool TryParse(string? hotkey, out uint modifiers, out uint virtualKey)
     {
         modifiers = 0;
@@ -76,6 +86,34 @@ public sealed class HotKeyService : IDisposable
 
         return TryMapKey(parts[^1].Trim(), out virtualKey) && modifiers != 0 && virtualKey != 0;
     }
+
+    /// <summary>사용자가 누른 키 조합을 저장용 문자열로. 수식키만 눌렀거나 수식키가 없으면 null.</summary>
+    public static string? Format(ModifierKeys modifiers, Key key)
+    {
+        if (key is Key.LeftCtrl or Key.RightCtrl or Key.LeftAlt or Key.RightAlt or Key.LeftShift or Key.RightShift or Key.LWin or Key.RWin or Key.System or Key.None) return null;
+        if (modifiers == ModifierKeys.None) return null;
+        if (KeyName(key) is not { } name) return null;
+
+        List<string> parts = [];
+        if (modifiers.HasFlag(ModifierKeys.Control)) parts.Add("Ctrl");
+        if (modifiers.HasFlag(ModifierKeys.Alt)) parts.Add("Alt");
+        if (modifiers.HasFlag(ModifierKeys.Shift)) parts.Add("Shift");
+        if (modifiers.HasFlag(ModifierKeys.Windows)) parts.Add("Win");
+        parts.Add(name);
+        return string.Join("+", parts);
+    }
+
+    private static string? KeyName(Key key) => key switch
+    {
+        >= Key.A and <= Key.Z => key.ToString(),
+        >= Key.D0 and <= Key.D9 => ((int)key - (int)Key.D0).ToString(),
+        >= Key.F1 and <= Key.F12 => key.ToString(),
+        Key.Space => "Space",
+        Key.Enter => "Enter",
+        Key.Tab => "Tab",
+        Key.Oem3 => "`",
+        _ => null,
+    };
 
     private static bool TryMapKey(string key, out uint vk)
     {

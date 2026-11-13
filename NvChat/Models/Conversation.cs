@@ -1,23 +1,32 @@
 namespace NvChat.Models;
 
-/// <summary>하나의 대화 세션(직렬화용 POCO). %APPDATA%\NvChat\conversations.json 에 저장된다.</summary>
+/// <summary>하나의 대화 세션(직렬화용 POCO). %APPDATA%\NvChat\conversations\{Id}.json 에 대화마다 한 파일로 저장된다.</summary>
 public sealed class Conversation
 {
     public string? Id { get; set; }
+
     public string? Title { get; set; }
+
     public string? ModelId { get; set; }
+
     public string? SystemPrompt { get; set; }
+
     public bool Pinned { get; set; }
 
     /// <summary>제목이 확정되어 자동 생성 대상이 아님.</summary>
     public bool TitleLocked { get; set; }
 
     public GenerationParameters? Parameters { get; set; } = new();
+
     public List<ChatMessage> Messages { get; set; } = [];
 
     /// <summary>이 대화에서 모델별로 쓴 요청/토큰 수.</summary>
     public List<ModelUsage> Usage { get; set; } = [];
 
+    /// <summary>아직 보내지 않은 입력창 초안. 대화를 오가도, 앱을 다시 켜도 남는다.</summary>
+    public string? Draft { get; set; }
+
     public DateTime CreatedAt { get; set; }
+
     public DateTime UpdatedAt { get; set; }
 }

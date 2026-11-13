@@ -70,6 +70,7 @@ public sealed class SettingsStore : ISettingsStore
         settings.DefaultParameters ??= new GenerationParameters();
         settings.Presets ??= AppSettings.DefaultPresets();
         settings.MigrateLegacyWindowState();
+        settings.Normalize();
         return settings;
     }
 
@@ -90,25 +91,9 @@ public sealed class SettingsStore : ISettingsStore
             if (!string.IsNullOrEmpty(settings.ApiKey) && encryptedKey is null) return;
         }
 
-        AppSettings toStore = new()
-        {
-            ApiKey = encryptedKey,
-            BaseUrl = settings.BaseUrl,
-            DefaultModelId = settings.DefaultModelId,
-            DefaultSystemPrompt = settings.DefaultSystemPrompt,
-            DefaultParameters = settings.DefaultParameters,
-            SendOnEnter = settings.SendOnEnter,
-            GenerateTitles = settings.GenerateTitles,
-            AboutYou = settings.AboutYou,
-            ResponseStyle = settings.ResponseStyle,
-            Presets = settings.Presets,
-            GlobalHotkey = settings.GlobalHotkey,
-            MinimizeToTrayOnClose = settings.MinimizeToTrayOnClose,
-            CloseToTrayHintShown = settings.CloseToTrayHintShown,
-            AutoCheckUpdates = settings.AutoCheckUpdates,
-            Language = settings.Language,
-            Window = settings.Window,
-        };
+        // 얕은 복사본에 키만 암호문으로 바꿔 저장한다. (필드를 하나씩 옮겨 적으면 새 설정을 추가할 때 빠뜨리기 쉽다)
+        AppSettings toStore = settings.Clone();
+        toStore.ApiKey = encryptedKey;
 
         try
         {

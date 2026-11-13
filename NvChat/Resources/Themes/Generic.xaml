@@ -10,6 +10,7 @@
         <ResourceDictionary Source="pack://application:,,,/NvChat;component/Resources/Dictionaries/Icons.xaml" />
         <ResourceDictionary Source="pack://application:,,,/NvChat;component/Resources/Dictionaries/Controls.xaml" />
         <ResourceDictionary Source="pack://application:,,,/NvChat;component/Resources/Dictionaries/Window.xaml" />
+        <ResourceDictionary Source="pack://application:,,,/NvChat;component/Resources/Dictionaries/Messages.xaml" />
     </ResourceDictionary.MergedDictionaries>
 
 </ResourceDictionary>

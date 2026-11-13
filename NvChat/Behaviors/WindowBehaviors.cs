@@ -1,5 +1,7 @@
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Interop;
 using NvChat.Models;
 
 namespace NvChat.Behaviors;
@@ -24,6 +26,68 @@ public static class WindowBehaviors
     public static ICommand? GetSavePlacementCommand(DependencyObject o) => (ICommand?)o.GetValue(SavePlacementCommandProperty);
 
     public static void SetSavePlacementCommand(DependencyObject o, ICommand? value) => o.SetValue(SavePlacementCommandProperty, value);
+
+    /// <summary>창 폭이 이 값보다 좁아지면 <see cref="IsNarrowProperty"/> 를 true 로 만든다(좁은 창에서 사이드바를 자동으로 접는 데 쓴다).</summary>
+    public static readonly DependencyProperty NarrowBelowProperty = DependencyProperty.RegisterAttached(
+        "NarrowBelow", typeof(double), typeof(WindowBehaviors), new PropertyMetadata(0.0, OnNarrowBelowChanged));
+
+    public static double GetNarrowBelow(DependencyObject o) => (double)o.GetValue(NarrowBelowProperty);
+
+    public static void SetNarrowBelow(DependencyObject o, double value) => o.SetValue(NarrowBelowProperty, value);
+
+    public static readonly DependencyProperty IsNarrowProperty = DependencyProperty.RegisterAttached(
+        "IsNarrow", typeof(bool), typeof(WindowBehaviors), new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault));
+
+    public static bool GetIsNarrow(DependencyObject o) => (bool)o.GetValue(IsNarrowProperty);
+
+    public static void SetIsNarrow(DependencyObject o, bool value) => o.SetValue(IsNarrowProperty, value);
+
+    private static void OnNarrowBelowChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is not Window w) return;
+        w.SizeChanged -= OnWindowSizeChanged;
+        if ((double)e.NewValue > 0) w.SizeChanged += OnWindowSizeChanged;
+    }
+
+    private static void OnWindowSizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        var w = (Window)sender;
+        bool narrow = e.NewSize.Width < GetNarrowBelow(w);
+        if (GetIsNarrow(w) != narrow) w.SetCurrentValue(IsNarrowProperty, narrow);
+    }
+
+    /// <summary>작업 표시줄 버튼을 깜빡여 주의를 끈다(창이 앞으로 오면 멈춘다). 뒤에 가려진 창에서 응답이 끝났을 때 쓴다.</summary>
+    public static void Flash(Window window)
+    {
+        try
+        {
+            nint handle = new WindowInteropHelper(window).Handle;
+            if (handle == 0) return;
+
+            FlashInfo info = new()
+            {
+                Size = (uint)Marshal.SizeOf<FlashInfo>(),
+                Handle = handle,
+                Flags = 0x00000002 | 0x0000000C, // FLASHW_TRAY | FLASHW_TIMERNOFG
+                Count = 3,
+            };
+            FlashWindowEx(ref info);
+        }
+        catch { /* 알림 실패는 무시 */ }
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct FlashInfo
+    {
+        public uint Size;
+        public nint Handle;
+        public uint Flags;
+        public uint Count;
+        public uint Timeout;
+    }
+
+    [DllImport("user32.dll")]
+    private static extern bool FlashWindowEx(ref FlashInfo info);
 
     private static void OnPlacementChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {

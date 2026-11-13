@@ -6,13 +6,13 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:views="clr-namespace:NvChat.Views"
     xmlns:vm="clr-namespace:NvChat.ViewModels"
-    xmlns:controls="clr-namespace:NvChat.Controls"
     xmlns:behaviors="clr-namespace:NvChat.Behaviors"
     xmlns:loc="clr-namespace:NvChat.Localization"
+    xmlns:sys="clr-namespace:System;assembly=System.Runtime"
     mc:Ignorable="d"
     Title="{loc:Loc QuickChatTitle}"
-    Width="660"
-    Height="560"
+    Width="680"
+    Height="580"
     MinWidth="460"
     MinHeight="360"
     ShowMinimizeButton="False"
@@ -24,11 +24,23 @@
     WindowStartupLocation="Manual"
     d:DataContext="{d:DesignInstance vm:MainViewModel}"
     >
+    <views:WindowView.Resources>
+        <!-- 작은 창이라 대화 컬럼 폭 제한을 두지 않는다(공용 메시지 템플릿이 이 키를 찾는다). -->
+        <sys:Double x:Key="ConversationColumnWidth">100000</sys:Double>
+    </views:WindowView.Resources>
+
     <views:WindowView.TitleBarContent>
         <Grid Margin="6,0,4,0">
             <!-- 브랜드 아이콘과 창 제목("빠른 채팅")은 창 템플릿이 이미 그리므로 여기서는 모델명만 표시한다. -->
-            <TextBlock Text="{Binding SelectedModel.Name}" HorizontalAlignment="Left" Foreground="{StaticResource MutedForegroundBrush}" FontSize="11.5" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="240" />
+            <TextBlock Text="{Binding SelectedModel.Name}" HorizontalAlignment="Left" Foreground="{DynamicResource MutedForegroundBrush}" FontSize="11.5" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="200" />
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" WindowChrome.IsHitTestVisibleInChrome="True">
+                <!-- 빠른 채팅은 지금 고른 대화에 이어 붙는다. 다른 주제를 물을 땐 여기서 바로 새 대화를 연다. -->
+                <Button Command="{Binding NewConversationCommand}" Style="{StaticResource SubtleButtonStyle}" Padding="8,5" ToolTip="{loc:Loc TipNewChat}">
+                    <StackPanel Orientation="Horizontal">
+                        <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconPlus}" Width="14" Height="14" />
+                        <TextBlock Text="{loc:Loc NewChat}" Margin="6,0,0,0" VerticalAlignment="Center" FontSize="12" />
+                    </StackPanel>
+                </Button>
                 <Button Command="{Binding OpenMainCommand, RelativeSource={RelativeSource AncestorType=views:QuickChatWindow}}" Style="{StaticResource SubtleButtonStyle}" Padding="8,5" ToolTip="{loc:Loc TipOpenMain}">
                     <StackPanel Orientation="Horizontal">
                         <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconChat}" Width="14" Height="14" />
@@ -44,79 +56,93 @@
 
     <Grid behaviors:InputBehaviors.DropFilesCommand="{Binding AttachFilesCommand}">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" Padding="16,10,10,6" behaviors:AutoScrollBehavior.IsEnabled="True">
-            <ItemsControl ItemsSource="{Binding SelectedConversation.Messages}">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate DataType="{x:Type vm:ChatMessageViewModel}">
-                        <Grid Margin="0,5">
-                            <!-- 어시스턴트 답변은 말풍선 없이 본문만 놓는다. (메인 창과 동일) -->
-                            <Border x:Name="Bubble" HorizontalAlignment="Left" MaxWidth="560" Background="Transparent" BorderThickness="0" CornerRadius="10" Padding="2,2">
-                                <StackPanel>
-                                    <TextBlock x:Name="RawText" Text="{Binding Content}" Foreground="{StaticResource ForegroundBrush}" TextWrapping="Wrap"
-                                               Visibility="{Binding ShowMarkdown, Converter={StaticResource InverseBoolToVis}}" />
-                                    <controls:MarkdownPresenter x:Name="Markdown" Markdown="{Binding Content}" Visibility="{Binding ShowMarkdown, Converter={StaticResource BoolToVis}}" />
-                                    <StackPanel x:Name="Typing" Orientation="Horizontal" Visibility="Collapsed" Height="18" VerticalAlignment="Center">
-                                        <Ellipse x:Name="Dot1" Width="6" Height="6" Margin="0,0,5,0" VerticalAlignment="Center" Fill="{StaticResource AccentBrush}" Opacity="0.35" />
-                                        <Ellipse x:Name="Dot2" Width="6" Height="6" Margin="0,0,5,0" VerticalAlignment="Center" Fill="{StaticResource AccentBrush}" Opacity="0.35" />
-                                        <Ellipse x:Name="Dot3" Width="6" Height="6" VerticalAlignment="Center" Fill="{StaticResource AccentBrush}" Opacity="0.35" />
-                                    </StackPanel>
-                                </StackPanel>
-                            </Border>
-                        </Grid>
-                        <DataTemplate.Triggers>
-                            <DataTrigger Binding="{Binding IsUser}" Value="True">
-                                <Setter TargetName="Bubble" Property="HorizontalAlignment" Value="Right" />
-                                <Setter TargetName="Bubble" Property="Background" Value="{StaticResource UserBubbleBackgroundBrush}" />
-                                <Setter TargetName="Bubble" Property="BorderBrush" Value="{StaticResource UserBubbleBorderBrush}" />
-                                <Setter TargetName="Bubble" Property="BorderThickness" Value="1" />
-                                <Setter TargetName="Bubble" Property="Padding" Value="12,9" />
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding HasError}" Value="True">
-                                <Setter TargetName="RawText" Property="Foreground" Value="{StaticResource ErrorBrush}" />
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding IsWaiting}" Value="True">
-                                <Setter TargetName="Typing" Property="Visibility" Value="Visible" />
-                                <Setter TargetName="RawText" Property="Visibility" Value="Collapsed" />
-                                <Setter TargetName="Markdown" Property="Visibility" Value="Collapsed" />
-                                <DataTrigger.EnterActions>
-                                    <BeginStoryboard x:Name="QSb">
-                                        <Storyboard RepeatBehavior="Forever">
-                                            <DoubleAnimation Storyboard.TargetName="Dot1" Storyboard.TargetProperty="Opacity" From="0.35" To="1" Duration="0:0:0.45" AutoReverse="True" />
-                                            <DoubleAnimation Storyboard.TargetName="Dot2" Storyboard.TargetProperty="Opacity" From="0.35" To="1" BeginTime="0:0:0.15" Duration="0:0:0.45" AutoReverse="True" />
-                                            <DoubleAnimation Storyboard.TargetName="Dot3" Storyboard.TargetProperty="Opacity" From="0.35" To="1" BeginTime="0:0:0.3" Duration="0:0:0.45" AutoReverse="True" />
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </DataTrigger.EnterActions>
-                                <DataTrigger.ExitActions>
-                                    <StopStoryboard BeginStoryboardName="QSb" />
-                                </DataTrigger.ExitActions>
-                            </DataTrigger>
-                        </DataTemplate.Triggers>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-        </ScrollViewer>
+        <!-- 상태 배너(메인 창과 같은 내용) -->
+        <Border Grid.Row="0" Margin="12,8,12,0" Padding="10,7" Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource WarnBrush}" BorderThickness="1" CornerRadius="8"
+                Visibility="{Binding HasStatusMessage, Converter={StaticResource BoolToVis}}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="{Binding StatusMessage}" Foreground="{DynamicResource ForegroundBrush}" TextWrapping="Wrap" VerticalAlignment="Center" FontSize="12" />
+                <Button Grid.Column="1" Command="{Binding RetryCommand}" Content="{Binding RetryText}" Padding="10,4" Margin="8,0,0,0" FontSize="12"
+                        Visibility="{Binding HasRetry, Converter={StaticResource BoolToVis}}" />
+                <Button Grid.Column="2" Command="{Binding DismissStatusCommand}" Style="{StaticResource SubtleButtonStyle}" Padding="6" Margin="4,0,0,0" ToolTip="{loc:Loc TipDismiss}">
+                    <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconClose}" Width="10" Height="10" />
+                </Button>
+            </Grid>
+        </Border>
 
-        <Border Grid.Row="1" Margin="12,4,12,12" Padding="10,8" Background="{StaticResource ControlBackgroundBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="12">
+        <Grid Grid.Row="1">
+            <!-- 메시지 목록: 메인 창과 같은 템플릿(추론·이미지·복사·다시 생성·버전 전환 포함) -->
+            <ItemsControl x:Name="MessagesList" Style="{StaticResource ChatMessageListStyle}" Padding="16,6,10,6"
+                          ItemsSource="{Binding SelectedConversation.Messages}" />
+
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="20,0"
+                        Visibility="{Binding SelectedConversation.IsEmpty, Converter={StaticResource BoolToVis}}">
+                <Image Source="pack://application:,,,/NvChat;component/Resources/brand.png" Width="44" Height="44" HorizontalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality" />
+                <TextBlock Text="{loc:Loc EmptyStateTitle}" Foreground="{DynamicResource SecondaryForegroundBrush}" FontSize="15" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,12,0,0" />
+            </StackPanel>
+
+            <Button HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,20,8" Width="32" Height="32"
+                    Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderStrongBrush}" Foreground="{DynamicResource ForegroundBrush}" ToolTip="{loc:Loc TipScrollBottom}"
+                    behaviors:ChatScroll.ScrollToBottomOf="{Binding ElementName=MessagesList}"
+                    Visibility="{Binding (behaviors:ChatScroll.IsAtBottom), ElementName=MessagesList, Converter={StaticResource InverseBoolToVis}}">
+                <Button.Template>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" CornerRadius="16">
+                            <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconArrowDown}" Width="16" Height="16" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ControlHoverBackgroundBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
+
+            <!-- 토스트(복사됨·삭제됨 + 실행 취소) -->
+            <Border HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,10" Padding="12,6,6,6" CornerRadius="9"
+                    Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderStrongBrush}" BorderThickness="1"
+                    Visibility="{Binding IsToastVisible, Converter={StaticResource BoolToVis}}">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="{Binding ToastText}" Foreground="{DynamicResource ForegroundBrush}" FontSize="12" VerticalAlignment="Center" Margin="0,0,6,0" />
+                    <Button Command="{Binding InvokeToastActionCommand}" Style="{StaticResource SubtleButtonStyle}" Padding="8,3" FontSize="12" FontWeight="SemiBold"
+                            Foreground="{DynamicResource AccentBrush}" Content="{Binding ToastActionText}"
+                            Visibility="{Binding HasToastAction, Converter={StaticResource BoolToVis}}" />
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <Border Grid.Row="2" Margin="12,4,12,12" Padding="12,9,10,8" Background="{DynamicResource ControlBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="14">
             <StackPanel>
-                <TextBox Text="{Binding InputText, UpdateSourceTrigger=PropertyChanged}" Tag="{loc:Loc PhQuickInput}" Background="Transparent" BorderThickness="0" Padding="2"
+                <TextBox Text="{Binding InputText, UpdateSourceTrigger=PropertyChanged}" Tag="{loc:Loc PhQuickInput}" Background="Transparent" BorderThickness="0" Padding="2" FontSize="14"
                          AcceptsReturn="True" TextWrapping="Wrap" MaxHeight="140" VerticalScrollBarVisibility="Auto"
+                         AutomationProperties.Name="{loc:Loc MessageInput}"
                          behaviors:FocusBehavior.FocusWhenVisible="True"
+                         behaviors:FocusBehavior.FocusToken="{Binding InputFocusToken}"
                          behaviors:InputBehaviors.SendCommand="{Binding SendCommand}"
                          behaviors:InputBehaviors.SendOnEnter="{Binding SendOnEnter}"
                          behaviors:InputBehaviors.PasteImageCommand="{Binding PasteImageCommand}" />
 
                 <!-- 첨부 미리보기(메인 창과 공유) -->
-                <ItemsControl ItemsSource="{Binding Attachments}" Margin="0,4,0,2" Visibility="{Binding HasAttachments, Converter={StaticResource BoolToVis}}">
-                    <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                <ItemsControl ItemsSource="{Binding Attachments}" Margin="0,4,0,2" Focusable="False" Visibility="{Binding HasAttachments, Converter={StaticResource BoolToVis}}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
                             <Grid Margin="0,0,6,4" Width="48" Height="48">
-                                <Border CornerRadius="6" ClipToBounds="True" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                                <Border CornerRadius="6" ClipToBounds="True" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                                     <Image Source="{Binding Preview}" Stretch="UniformToFill" />
                                 </Border>
                                 <Button Command="{Binding DataContext.RemoveAttachmentCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"
@@ -130,7 +156,10 @@
                 </ItemsControl>
 
                 <Grid Margin="0,4,0,0">
-                    <Button HorizontalAlignment="Right" Command="{Binding SendCommand}" Style="{StaticResource AccentButtonStyle}" Padding="14,6"
+                    <Button HorizontalAlignment="Left" Command="{Binding AttachImageCommand}" Style="{StaticResource SubtleButtonStyle}" Padding="6" ToolTip="{loc:Loc TipAttachImage}">
+                        <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconAttach}" Width="17" Height="17" />
+                    </Button>
+                    <Button HorizontalAlignment="Right" Command="{Binding SendCommand}" Style="{StaticResource AccentButtonStyle}" Padding="14,6" ToolTip="{loc:Loc Send}"
                             Visibility="{Binding IsSelectedStreaming, Converter={StaticResource InverseBoolToVis}}">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="{loc:Loc Send}" VerticalAlignment="Center" />
@@ -140,7 +169,7 @@
                     <Button HorizontalAlignment="Right" Command="{Binding StopCommand}" Padding="14,6" ToolTip="{loc:Loc TipStop}"
                             Visibility="{Binding IsSelectedStreaming, Converter={StaticResource BoolToVis}}">
                         <StackPanel Orientation="Horizontal">
-                            <Path Data="{StaticResource IconStop}" Width="13" Height="13" Stretch="Uniform" Fill="{StaticResource ErrorBrush}" VerticalAlignment="Center" />
+                            <Path Data="{StaticResource IconStop}" Width="13" Height="13" Stretch="Uniform" Fill="{DynamicResource ErrorBrush}" VerticalAlignment="Center" />
                             <TextBlock Text="{loc:Loc Stop}" Margin="7,0,0,0" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>

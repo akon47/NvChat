@@ -61,6 +61,9 @@ internal sealed class ChatCompletionChunk
 {
     [JsonPropertyName("choices")] public List<ChunkChoice>? Choices { get; init; }
     [JsonPropertyName("usage")] public TokenUsage? Usage { get; init; }
+
+    /// <summary>200 으로 시작한 스트림 안에 실려 오는 오류 객체({ "error": {...} } 또는 문자열). 정상 청크에는 없다.</summary>
+    [JsonPropertyName("error")] public System.Text.Json.JsonElement? Error { get; init; }
 }
 
 internal sealed class ChunkChoice
@@ -75,6 +78,9 @@ internal sealed class ChunkDelta
 
     /// <summary>일부 추론(reasoning) 모델은 별도 필드로 사고 과정을 스트리밍한다.</summary>
     [JsonPropertyName("reasoning_content")] public string? ReasoningContent { get; init; }
+
+    /// <summary>같은 내용을 "reasoning" 이라는 이름으로 보내는 서버도 있다.</summary>
+    [JsonPropertyName("reasoning")] public string? Reasoning { get; init; }
 }
 
 /// <summary>비스트리밍 채팅 완성 응답.</summary>

@@ -1,0 +1,265 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="clr-namespace:NvChat.ViewModels"
+    xmlns:controls="clr-namespace:NvChat.Controls"
+    xmlns:behaviors="clr-namespace:NvChat.Behaviors"
+    xmlns:loc="clr-namespace:NvChat.Localization"
+    xmlns:sys="clr-namespace:System;assembly=System.Runtime"
+    >
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="pack://application:,,,/NvChat;component/Resources/Dictionaries/Converters.xaml" />
+        <ResourceDictionary Source="pack://application:,,,/NvChat;component/Resources/Dictionaries/Icons.xaml" />
+        <ResourceDictionary Source="pack://application:,,,/NvChat;component/Resources/Dictionaries/Controls.xaml" />
+    </ResourceDictionary.MergedDictionaries>
+
+    <!-- 메시지 목록과 그 안의 메시지 한 줄. 메인 창과 빠른 채팅 창이 같은 것을 쓴다(예전엔 창마다 따로 있어 빠른 채팅에는 추론·이미지·복사가 없었다).
+         명령은 목록(ItemsControl)의 DataContext 인 MainViewModel 에서 찾는다. -->
+
+    <!-- 대화 컬럼의 최대 폭(기본값). 창이 자기 Resources 에서 같은 키로 덮어쓸 수 있다. -->
+    <sys:Double x:Key="ConversationColumnWidth">800</sys:Double>
+
+    <!-- 본문 타이포그래피: MarkdownRenderer.BodyFontSize / BodyLineHeight 와 같은 값. -->
+    <sys:Double x:Key="BodyFontSize">14.5</sys:Double>
+    <sys:Double x:Key="BodyLineHeight">23</sys:Double>
+
+    <!-- 선택·복사가 되는 읽기 전용 텍스트(사용자 메시지, 추론, 오류). TextBlock 처럼 보이지만 드래그 선택과 Ctrl+C 가 된다. -->
+    <Style x:Key="SelectableTextStyle" TargetType="{x:Type TextBox}" BasedOn="{StaticResource {x:Type TextBox}}">
+        <Setter Property="IsReadOnly" Value="True" />
+        <Setter Property="IsTabStop" Value="False" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Margin" Value="-2,0" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+        <Setter Property="FontSize" Value="{StaticResource BodyFontSize}" />
+        <Setter Property="TextBlock.LineHeight" Value="{StaticResource BodyLineHeight}" />
+        <Setter Property="SelectionOpacity" Value="0.35" />
+        <Setter Property="Cursor" Value="IBeam" />
+    </Style>
+
+    <!-- 대기 중 점 세 개 -->
+    <Storyboard x:Key="TypingDotsStoryboard" RepeatBehavior="Forever">
+        <DoubleAnimation Storyboard.TargetName="Dot1" Storyboard.TargetProperty="Opacity" From="0.3" To="1" Duration="0:0:0.45" AutoReverse="True" />
+        <DoubleAnimation Storyboard.TargetName="Dot2" Storyboard.TargetProperty="Opacity" From="0.3" To="1" BeginTime="0:0:0.15" Duration="0:0:0.45" AutoReverse="True" />
+        <DoubleAnimation Storyboard.TargetName="Dot3" Storyboard.TargetProperty="Opacity" From="0.3" To="1" BeginTime="0:0:0.3" Duration="0:0:0.45" AutoReverse="True" />
+    </Storyboard>
+
+    <DataTemplate x:Key="ChatMessageTemplate" DataType="{x:Type vm:ChatMessageViewModel}">
+        <!-- Stretch + MaxWidth 조합이면 상한까지 늘어난 뒤 남는 공간에서 가운데로 놓인다. 새 메시지는 한 번 떠오르듯 나타난다. -->
+        <Grid x:Name="MsgRow" Margin="0,8" MaxWidth="{DynamicResource ConversationColumnWidth}" HorizontalAlignment="Stretch"
+              behaviors:LayoutBehaviors.FadeInOnce="{Binding IsFresh}">
+            <!-- Background=Transparent 로 말풍선+여백+액션 영역 전체를 히트테스트 대상으로 만들어 마우스를 버튼으로 내려도 호버가 끊기지 않게 한다. -->
+            <StackPanel x:Name="Column" HorizontalAlignment="Left" Background="Transparent">
+                <!-- 기본(어시스턴트)은 말풍선을 씌우지 않는다. 본문이 그대로 놓이고, 말풍선은 사용자 메시지에만 씌운다. -->
+                <Border x:Name="Bubble" Background="Transparent" BorderThickness="0" CornerRadius="14" Padding="2,2" HorizontalAlignment="Left">
+                    <StackPanel>
+                        <!-- 첨부 이미지 -->
+                        <ItemsControl ItemsSource="{Binding ImageSources}" Margin="0,0,0,8" Focusable="False" Visibility="{Binding HasImages, Converter={StaticResource BoolToVis}}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border CornerRadius="8" Margin="0,0,6,6" ClipToBounds="True" MaxHeight="240" MaxWidth="300" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                        <Image Source="{Binding}" Stretch="Uniform" />
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <!-- 추론 섹션 -->
+                        <StackPanel x:Name="ReasoningBox" Visibility="Collapsed" Margin="0,0,0,8">
+                            <Button Command="{Binding ToggleReasoningCommand}" Style="{StaticResource SubtleButtonStyle}" HorizontalAlignment="Left" Padding="6,3">
+                                <StackPanel Orientation="Horizontal">
+                                    <Path x:Name="ReasoningChevron" Style="{StaticResource IconStyle}" Data="{StaticResource IconChevronRight}" Width="12" Height="12" />
+                                    <TextBlock Text="{loc:Loc Reasoning}" Margin="6,0,0,0" VerticalAlignment="Center" FontSize="12" />
+                                </StackPanel>
+                            </Button>
+                            <Border x:Name="ReasoningBody" Visibility="Collapsed" Background="{DynamicResource CodeBlockBackgroundBrush}" CornerRadius="8" Padding="12,9" Margin="0,4,0,0">
+                                <TextBox Style="{StaticResource SelectableTextStyle}" Text="{Binding Reasoning, Mode=OneWay}" Foreground="{DynamicResource SecondaryForegroundBrush}" FontSize="13" TextBlock.LineHeight="20" />
+                            </Border>
+                        </StackPanel>
+
+                        <!-- 편집 모드 -->
+                        <StackPanel x:Name="EditPanel" Visibility="Collapsed">
+                            <TextBox Text="{Binding EditText, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="Wrap" MinWidth="360" MaxHeight="280" VerticalScrollBarVisibility="Auto"
+                                     FontSize="{StaticResource BodyFontSize}" behaviors:FocusBehavior.FocusWhenVisible="True" />
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
+                                <Button Content="{loc:Loc Cancel}" Command="{Binding CancelEditCommand}" Style="{StaticResource SubtleButtonStyle}" Padding="12,5" Margin="0,0,8,0" />
+                                <Button Content="{loc:Loc SaveAndRegen}" Style="{StaticResource AccentButtonStyle}" Padding="14,5"
+                                        Command="{Binding DataContext.SubmitEditCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}" />
+                            </StackPanel>
+                        </StackPanel>
+
+                        <!-- 본문: 사용자/오류는 일반 텍스트, 어시스턴트는 마크다운 -->
+                        <TextBox x:Name="RawText" Style="{StaticResource SelectableTextStyle}" Text="{Binding Content, Mode=OneWay}" Foreground="{DynamicResource ForegroundBrush}"
+                                 Visibility="{Binding ShowMarkdown, Converter={StaticResource InverseBoolToVis}}" />
+                        <controls:MarkdownPresenter x:Name="Markdown" Markdown="{Binding Content}"
+                                                    HighlightText="{Binding DataContext.FindHighlight, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                    Visibility="{Binding ShowMarkdown, Converter={StaticResource BoolToVis}}" />
+
+                        <!-- 타이핑 대기 애니메이션: 텍스트 한 줄 높이 안에서 점만 움직인다 -->
+                        <StackPanel x:Name="Typing" Orientation="Horizontal" Visibility="Collapsed" Height="23" VerticalAlignment="Center">
+                            <Ellipse x:Name="Dot1" Width="7" Height="7" Margin="0,0,5,0" VerticalAlignment="Center" Fill="{DynamicResource AccentBrush}" Opacity="0.3" />
+                            <Ellipse x:Name="Dot2" Width="7" Height="7" Margin="0,0,5,0" VerticalAlignment="Center" Fill="{DynamicResource AccentBrush}" Opacity="0.3" />
+                            <Ellipse x:Name="Dot3" Width="7" Height="7" VerticalAlignment="Center" Fill="{DynamicResource AccentBrush}" Opacity="0.3" />
+                        </StackPanel>
+
+                        <Border x:Name="AbortedChip" Visibility="Collapsed" HorizontalAlignment="Left" Margin="0,8,0,0" Padding="7,2" CornerRadius="4" Background="{DynamicResource InlineCodeBackgroundBrush}">
+                            <TextBlock Text="{loc:Loc Aborted}" Foreground="{DynamicResource MutedForegroundBrush}" FontSize="11" />
+                        </Border>
+                    </StackPanel>
+                </Border>
+
+                <!-- 말풍선 밖 하단: 버전 전환(있을 때 항상 보임) + 액션바(호버·키보드 포커스 때 보임) -->
+                <StackPanel x:Name="Footer" Orientation="Horizontal" Margin="0,4,0,0" HorizontalAlignment="Left">
+                    <StackPanel x:Name="VariantNav" Orientation="Horizontal" Visibility="Collapsed" Margin="0,0,6,0">
+                        <Button x:Name="PrevVariant" Command="{Binding DataContext.PreviousVariantCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"
+                                Style="{StaticResource SubtleButtonStyle}" Padding="4,3" ToolTip="{loc:Loc TipPrevVariant}">
+                            <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconChevronLeft}" Width="13" Height="13" />
+                        </Button>
+                        <TextBlock Text="{Binding VariantLabel}" Foreground="{DynamicResource SecondaryForegroundBrush}" FontSize="11.5" VerticalAlignment="Center" Margin="2,0" />
+                        <Button x:Name="NextVariant" Command="{Binding DataContext.NextVariantCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"
+                                Style="{StaticResource SubtleButtonStyle}" Padding="4,3" ToolTip="{loc:Loc TipNextVariant}">
+                            <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconChevronRight}" Width="13" Height="13" />
+                        </Button>
+                    </StackPanel>
+
+                    <!-- 숨길 때 Visibility 대신 Opacity 를 쓴다: 보이지 않아도 Tab 으로 들어올 수 있고, 들어오면 드러난다. -->
+                    <StackPanel x:Name="MsgActions" Orientation="Horizontal" Opacity="0">
+                        <Button Command="{Binding DataContext.CopyMessageCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"
+                                Style="{StaticResource SubtleButtonStyle}" Padding="6,4" ToolTip="{loc:Loc Copy}">
+                            <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconCopy}" Width="14" Height="14" />
+                        </Button>
+                        <Button x:Name="EditBtn" Command="{Binding BeginEditCommand}" Style="{StaticResource SubtleButtonStyle}" Padding="6,4" Visibility="Collapsed" ToolTip="{loc:Loc TipEditRegen}">
+                            <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconPencil}" Width="14" Height="14" />
+                        </Button>
+                        <Button x:Name="RegenBtn" Command="{Binding DataContext.RegenerateMessageCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"
+                                Style="{StaticResource SubtleButtonStyle}" Padding="6,4" Visibility="Collapsed" ToolTip="{loc:Loc Regenerate}">
+                            <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconRegenerate}" Width="14" Height="14" />
+                        </Button>
+                        <Button Command="{Binding DataContext.DeleteMessageCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"
+                                Style="{StaticResource SubtleButtonStyle}" Padding="6,4" ToolTip="{loc:Loc Delete}">
+                            <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconDelete}" Width="14" Height="14" />
+                        </Button>
+                        <!-- 모델 · 시각 · 걸린 시간 · 속도 -->
+                        <TextBlock Text="{Binding InfoText}" Foreground="{DynamicResource MutedForegroundBrush}" FontSize="11" VerticalAlignment="Center" Margin="8,0,0,0" />
+                    </StackPanel>
+                </StackPanel>
+            </StackPanel>
+        </Grid>
+        <DataTemplate.Triggers>
+            <DataTrigger Binding="{Binding IsUser}" Value="True">
+                <Setter TargetName="Column" Property="HorizontalAlignment" Value="Right" />
+                <Setter TargetName="Bubble" Property="HorizontalAlignment" Value="Right" />
+                <Setter TargetName="Bubble" Property="Background" Value="{DynamicResource UserBubbleBackgroundBrush}" />
+                <Setter TargetName="Bubble" Property="BorderBrush" Value="{DynamicResource UserBubbleBorderBrush}" />
+                <Setter TargetName="Bubble" Property="BorderThickness" Value="1" />
+                <Setter TargetName="Bubble" Property="Padding" Value="15,10" />
+                <Setter TargetName="Footer" Property="HorizontalAlignment" Value="Right" />
+                <Setter TargetName="EditBtn" Property="Visibility" Value="Visible" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding IsAssistant}" Value="True">
+                <Setter TargetName="RegenBtn" Property="Visibility" Value="Visible" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding HasReasoning}" Value="True">
+                <Setter TargetName="ReasoningBox" Property="Visibility" Value="Visible" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding IsReasoningExpanded}" Value="True">
+                <Setter TargetName="ReasoningBody" Property="Visibility" Value="Visible" />
+                <Setter TargetName="ReasoningChevron" Property="Data" Value="{StaticResource IconChevronDown}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding HasVariants}" Value="True">
+                <Setter TargetName="VariantNav" Property="Visibility" Value="Visible" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding CanGoPreviousVariant}" Value="False">
+                <Setter TargetName="PrevVariant" Property="Opacity" Value="0.3" />
+                <Setter TargetName="PrevVariant" Property="IsHitTestVisible" Value="False" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding CanGoNextVariant}" Value="False">
+                <Setter TargetName="NextVariant" Property="Opacity" Value="0.3" />
+                <Setter TargetName="NextVariant" Property="IsHitTestVisible" Value="False" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding HasError}" Value="True">
+                <Setter TargetName="RawText" Property="Foreground" Value="{DynamicResource ErrorBrush}" />
+                <!-- 오류는 눈에 띄어야 하므로 어시스턴트라도 테두리를 씌운다. -->
+                <Setter TargetName="Bubble" Property="BorderBrush" Value="{DynamicResource ErrorBrush}" />
+                <Setter TargetName="Bubble" Property="BorderThickness" Value="1" />
+                <Setter TargetName="Bubble" Property="Padding" Value="15,10" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding Aborted}" Value="True">
+                <Setter TargetName="AbortedChip" Property="Visibility" Value="Visible" />
+            </DataTrigger>
+            <!-- 대화 내 찾기에서 지금 가리키는 메시지 -->
+            <DataTrigger Binding="{Binding IsFindCurrent}" Value="True">
+                <Setter TargetName="Bubble" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+                <Setter TargetName="Bubble" Property="BorderThickness" Value="1" />
+                <Setter TargetName="Bubble" Property="Padding" Value="15,10" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding IsWaiting}" Value="True">
+                <Setter TargetName="Typing" Property="Visibility" Value="Visible" />
+                <!-- 대기 중에는 빈 본문이 자리를 차지하지 않도록 숨겨 말풍선을 점 크기로 유지. -->
+                <Setter TargetName="RawText" Property="Visibility" Value="Collapsed" />
+                <Setter TargetName="Markdown" Property="Visibility" Value="Collapsed" />
+                <DataTrigger.EnterActions>
+                    <BeginStoryboard x:Name="TypingSb" Storyboard="{StaticResource TypingDotsStoryboard}" />
+                </DataTrigger.EnterActions>
+                <DataTrigger.ExitActions>
+                    <StopStoryboard BeginStoryboardName="TypingSb" />
+                </DataTrigger.ExitActions>
+            </DataTrigger>
+            <!-- 액션바: 마우스를 올리거나 키보드 포커스가 줄 안에 들어오면 보인다. -->
+            <Trigger SourceName="MsgRow" Property="IsMouseOver" Value="True">
+                <Setter TargetName="MsgActions" Property="Opacity" Value="1" />
+            </Trigger>
+            <Trigger SourceName="MsgRow" Property="IsKeyboardFocusWithin" Value="True">
+                <Setter TargetName="MsgActions" Property="Opacity" Value="1" />
+            </Trigger>
+            <!-- 편집 중 숨김을 뒤에 둬서(나중 선언 우선) 편집 중에는 액션바가 뜨지 않게 한다. -->
+            <DataTrigger Binding="{Binding IsEditing}" Value="True">
+                <Setter TargetName="EditPanel" Property="Visibility" Value="Visible" />
+                <Setter TargetName="RawText" Property="Visibility" Value="Collapsed" />
+                <Setter TargetName="Markdown" Property="Visibility" Value="Collapsed" />
+                <Setter TargetName="Footer" Property="Visibility" Value="Collapsed" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding IsStreaming}" Value="True">
+                <Setter TargetName="Footer" Property="Visibility" Value="Hidden" />
+            </DataTrigger>
+        </DataTemplate.Triggers>
+    </DataTemplate>
+
+    <!-- 메시지 목록. 화면 근처의 메시지만 실제 요소로 만든다(가상화) — 메시지마다 RichTextBox 가 들어가므로, 긴 대화를 통째로 만들면
+         대화를 바꿀 때마다 수백 개의 문서를 한꺼번에 레이아웃하게 된다. 스크롤은 픽셀 단위(메시지 높이가 제각각이라 항목 단위는 뚝뚝 끊긴다). -->
+    <Style x:Key="ChatMessageListStyle" TargetType="{x:Type ItemsControl}">
+        <Setter Property="Focusable" Value="False" />
+        <Setter Property="ItemTemplate" Value="{StaticResource ChatMessageTemplate}" />
+        <Setter Property="VirtualizingPanel.IsVirtualizing" Value="True" />
+        <Setter Property="VirtualizingPanel.VirtualizationMode" Value="Standard" />
+        <Setter Property="VirtualizingPanel.ScrollUnit" Value="Pixel" />
+        <Setter Property="VirtualizingPanel.CacheLength" Value="1.5" />
+        <Setter Property="VirtualizingPanel.CacheLengthUnit" Value="Page" />
+        <Setter Property="ScrollViewer.CanContentScroll" Value="True" />
+        <Setter Property="behaviors:ChatScroll.IsEnabled" Value="True" />
+        <Setter Property="ItemsPanel">
+            <Setter.Value>
+                <ItemsPanelTemplate>
+                    <VirtualizingStackPanel />
+                </ItemsPanelTemplate>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type ItemsControl}">
+                    <ScrollViewer CanContentScroll="True" Focusable="False" Padding="{TemplateBinding Padding}"
+                                  VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <ItemsPresenter />
+                    </ScrollViewer>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+</ResourceDictionary>

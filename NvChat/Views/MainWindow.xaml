@@ -6,38 +6,40 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:views="clr-namespace:NvChat.Views"
     xmlns:vm="clr-namespace:NvChat.ViewModels"
-    xmlns:controls="clr-namespace:NvChat.Controls"
     xmlns:behaviors="clr-namespace:NvChat.Behaviors"
     xmlns:loc="clr-namespace:NvChat.Localization"
-    xmlns:sys="clr-namespace:System;assembly=System.Runtime"
     mc:Ignorable="d"
     Title="NvChat"
     ShowTitleText="False"
     Width="1160"
     Height="780"
-    MinWidth="900"
-    MinHeight="580"
+    MinWidth="520"
+    MinHeight="460"
     Style="{StaticResource NvWindowStyle}"
     WindowStartupLocation="CenterScreen"
     behaviors:WindowBehaviors.Placement="{Binding WindowPlacement}"
     behaviors:WindowBehaviors.SavePlacementCommand="{Binding SaveWindowPlacementCommand}"
+    behaviors:WindowBehaviors.NarrowBelow="820"
+    behaviors:WindowBehaviors.IsNarrow="{Binding IsWindowNarrow}"
     d:DataContext="{d:DesignInstance vm:MainViewModel}"
     >
 
-    <views:WindowView.Resources>
-        <!-- 대화 컬럼의 최대 폭. 메시지 목록과 입력창이 같은 값을 써 세로로 정렬된다. -->
-        <sys:Double x:Key="ConversationColumnWidth">800</sys:Double>
-    </views:WindowView.Resources>
-
     <views:WindowView.InputBindings>
         <KeyBinding Modifiers="Control" Key="N" Command="{Binding NewConversationCommand}" />
-        <KeyBinding Modifiers="Control" Key="F" Command="{Binding FocusSearchCommand}" />
+        <KeyBinding Modifiers="Control" Key="F" Command="{Binding OpenFindCommand}" />
+        <KeyBinding Modifiers="Control+Shift" Key="F" Command="{Binding FocusSearchCommand}" />
         <KeyBinding Modifiers="Control" Key="B" Command="{Binding ToggleSidebarCommand}" />
         <KeyBinding Modifiers="Control" Key="M" Command="{Binding ToggleModelPickerCommand}" />
         <KeyBinding Modifiers="Control" Key="R" Command="{Binding RegenerateLastCommand}" />
         <KeyBinding Modifiers="Control" Key="E" Command="{Binding ExportConversationCommand}" />
         <KeyBinding Modifiers="Control+Shift" Key="C" Command="{Binding CopyConversationCommand}" />
         <KeyBinding Modifiers="Control" Key="OemComma" Command="{Binding OpenSettingsCommand}" />
+        <KeyBinding Modifiers="Control" Key="OemPlus" Command="{Binding ZoomInCommand}" />
+        <KeyBinding Modifiers="Control" Key="Add" Command="{Binding ZoomInCommand}" />
+        <KeyBinding Modifiers="Control" Key="OemMinus" Command="{Binding ZoomOutCommand}" />
+        <KeyBinding Modifiers="Control" Key="Subtract" Command="{Binding ZoomOutCommand}" />
+        <KeyBinding Modifiers="Control" Key="D0" Command="{Binding ZoomResetCommand}" />
+        <KeyBinding Modifiers="Control" Key="NumPad0" Command="{Binding ZoomResetCommand}" />
         <KeyBinding Key="F2" Command="{Binding RenameSelectedCommand}" />
         <KeyBinding Key="Escape" Command="{Binding StopCommand}" />
     </views:WindowView.InputBindings>
@@ -55,7 +57,7 @@
                     <StackPanel Orientation="Horizontal">
                         <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconChat}" Width="15" Height="15" Margin="0,0,7,0" />
                         <!-- TargetNullValue/FallbackValue 는 바인딩을 받을 수 없으므로, 모델이 없을 때는 트리거로 기본 라벨을 넣는다. -->
-                        <TextBlock Foreground="{StaticResource ForegroundBrush}" VerticalAlignment="Center" MaxWidth="280" TextTrimming="CharacterEllipsis">
+                        <TextBlock Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center" MaxWidth="280" TextTrimming="CharacterEllipsis">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="Text" Value="{Binding SelectedModel.Name}" />
@@ -75,7 +77,7 @@
                 <Popup IsOpen="{Binding IsModelPickerOpen, Mode=TwoWay}" PlacementTarget="{Binding ElementName=ModelPickerButton}" Placement="Bottom"
                        StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade" Focusable="True"
                        behaviors:PopupBehaviors.FocusOnOpen="{Binding ElementName=ModelSearchBox}">
-                    <Border Background="{StaticResource CardBackgroundBrush}" BorderBrush="{StaticResource BorderStrongBrush}" BorderThickness="1" CornerRadius="10"
+                    <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderStrongBrush}" BorderThickness="1" CornerRadius="10"
                             Width="440" MaxHeight="500" Margin="6" SnapsToDevicePixels="True">
                         <Border.Effect>
                             <DropShadowEffect BlurRadius="18" ShadowDepth="3" Opacity="0.5" Color="Black" />
@@ -84,21 +86,25 @@
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
                             <Grid Grid.Row="0" Margin="0,0,0,6">
                                 <TextBox x:Name="ModelSearchBox" Text="{Binding ModelSearchText, UpdateSourceTrigger=PropertyChanged}" Tag="{loc:Loc PhModelSearch}" Padding="30,7,10,7"
+                                         AutomationProperties.Name="{loc:Loc PhModelSearch}"
                                          behaviors:PopupBehaviors.EnterCommand="{Binding SelectFirstModelCommand}" />
                                 <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconSearch}" Width="15" Height="15" HorizontalAlignment="Left" Margin="9,0,0,0"
-                                      Fill="{StaticResource MutedForegroundBrush}" IsHitTestVisible="False" />
+                                      Fill="{DynamicResource MutedForegroundBrush}" IsHitTestVisible="False" />
                             </Grid>
                             <ListBox Grid.Row="1" ItemsSource="{Binding ModelsView}" SelectedItem="{Binding SelectedModel}" Background="Transparent" BorderThickness="0"
                                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                     VirtualizingPanel.IsVirtualizingWhenGrouping="True" VirtualizingPanel.ScrollUnit="Pixel"
+                                     AutomationProperties.Name="{loc:Loc ModelPickerDefault}"
                                      behaviors:PopupBehaviors.ClickCommand="{Binding CloseModelPickerCommand}">
                                 <ListBox.GroupStyle>
                                     <GroupStyle>
                                         <GroupStyle.HeaderTemplate>
                                             <DataTemplate>
-                                                <TextBlock Text="{Binding Name}" Foreground="{StaticResource MutedForegroundBrush}" FontSize="11" FontWeight="SemiBold" Margin="10,8,0,3" />
+                                                <TextBlock Text="{Binding Name}" Foreground="{DynamicResource MutedForegroundBrush}" FontSize="11" FontWeight="SemiBold" Margin="10,8,0,3" />
                                             </DataTemplate>
                                         </GroupStyle.HeaderTemplate>
                                     </GroupStyle>
@@ -106,21 +112,28 @@
                                 <ListBox.ItemTemplate>
                                     <DataTemplate>
                                         <StackPanel>
-                                            <TextBlock Text="{Binding Name}" Foreground="{StaticResource ForegroundBrush}" FontSize="13" TextTrimming="CharacterEllipsis" />
-                                            <TextBlock Text="{Binding Id}" Foreground="{StaticResource MutedForegroundBrush}" FontSize="10.5" TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Text="{Binding Name}" Foreground="{DynamicResource ForegroundBrush}" FontSize="13" TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Text="{Binding Id}" Foreground="{DynamicResource MutedForegroundBrush}" FontSize="10.5" TextTrimming="CharacterEllipsis" />
                                         </StackPanel>
                                     </DataTemplate>
                                 </ListBox.ItemTemplate>
                             </ListBox>
+                            <!-- 목록 갱신은 자주 쓰지 않으므로 타이틀바가 아니라 선택기 안에 둔다. -->
+                            <Border Grid.Row="2" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Margin="0,6,0,0" Padding="0,6,0,0">
+                                <Grid>
+                                    <TextBlock Text="{loc:Loc LoadingModels}" Foreground="{DynamicResource MutedForegroundBrush}" VerticalAlignment="Center" FontSize="11.5" Margin="8,0,0,0"
+                                               Visibility="{Binding IsModelLoading, Converter={StaticResource BoolToVis}}" />
+                                    <Button HorizontalAlignment="Right" Command="{Binding RefreshModelsCommand}" Style="{StaticResource SubtleButtonStyle}" Padding="8,5" FontSize="12">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconRefresh}" Width="14" Height="14" />
+                                            <TextBlock Text="{loc:Loc TipRefreshModels}" Margin="6,0,0,0" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Button>
+                                </Grid>
+                            </Border>
                         </Grid>
                     </Border>
                 </Popup>
-
-                <Button Command="{Binding RefreshModelsCommand}" Style="{StaticResource SubtleButtonStyle}" Padding="8" Margin="2,0,0,0" ToolTip="{loc:Loc TipRefreshModels}">
-                    <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconRefresh}" Width="16" Height="16" />
-                </Button>
-                <TextBlock Text="{loc:Loc LoadingModels}" Foreground="{StaticResource MutedForegroundBrush}" VerticalAlignment="Center" FontSize="11.5" Margin="6,0,0,0"
-                           Visibility="{Binding IsModelLoading, Converter={StaticResource BoolToVis}}" />
             </StackPanel>
 
             <Button HorizontalAlignment="Right" Command="{Binding OpenSettingsCommand}" Style="{StaticResource SubtleButtonStyle}" Padding="10,6" ToolTip="{loc:Loc TipSettings}">
@@ -135,13 +148,16 @@
     <!-- ================= 본문 ================= -->
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="{Binding SidebarWidth}" />
+            <ColumnDefinition Width="Auto" />
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
-        <!-- ===== 좌측 사이드바 ===== -->
-        <Border Grid.Column="0" Background="{StaticResource PanelBackgroundBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,1,0" ClipToBounds="True">
-            <Grid Width="279">
+        <!-- ===== 좌측 사이드바: 접으면 폭이 0 으로 부드럽게 줄고, 오른쪽 가장자리를 끌어 폭을 바꿀 수 있다 ===== -->
+        <Border Grid.Column="0" Background="{DynamicResource PanelBackgroundBrush}" ClipToBounds="True"
+                behaviors:LayoutBehaviors.ExpandedWidth="{Binding SidebarWidth}"
+                behaviors:LayoutBehaviors.Collapsed="{Binding IsSidebarCollapsed}">
+            <!-- 안쪽은 펼친 폭으로 고정해 두어, 접히는 동안 내용이 다시 배치되지 않고 잘려 나가듯 사라진다. -->
+            <Grid Width="{Binding SidebarWidth}" HorizontalAlignment="Left">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
@@ -149,7 +165,10 @@
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
-                <Button Grid.Row="0" Command="{Binding NewConversationCommand}" Style="{StaticResource AccentButtonStyle}" Margin="12,12,12,6" Padding="12,9" ToolTip="{loc:Loc TipNewChat}">
+                <Border Grid.RowSpan="4" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,1,0" IsHitTestVisible="False" />
+
+                <Button Grid.Row="0" Command="{Binding NewConversationCommand}" Style="{StaticResource AccentButtonStyle}" Margin="12,12,12,6" Padding="12,9" ToolTip="{loc:Loc TipNewChat}"
+                        AutomationProperties.Name="{loc:Loc NewChat}">
                     <StackPanel Orientation="Horizontal">
                         <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconPlus}" Width="15" Height="15" />
                         <TextBlock Text="{loc:Loc NewChat}" Margin="7,0,0,0" VerticalAlignment="Center" />
@@ -158,19 +177,23 @@
 
                 <Grid Grid.Row="1" Margin="12,4,12,6">
                     <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Tag="{loc:Loc PhSearchConversations}" FontSize="12.5" Padding="30,6,8,6" ToolTip="{loc:Loc TipSearch}"
+                             AutomationProperties.Name="{loc:Loc PhSearchConversations}"
                              behaviors:FocusBehavior.FocusToken="{Binding SearchFocusToken}" behaviors:FocusBehavior.SelectAll="True" />
                     <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconSearch}" Width="14" Height="14" HorizontalAlignment="Left" Margin="9,0,0,0"
-                          Fill="{StaticResource MutedForegroundBrush}" IsHitTestVisible="False" />
+                          Fill="{DynamicResource MutedForegroundBrush}" IsHitTestVisible="False" />
                 </Grid>
 
+                <!-- 그룹핑을 쓰면 ListBox 의 가상화가 꺼지므로 명시적으로 켠다(대화가 수백 개여도 보이는 줄만 만든다). -->
                 <ListBox Grid.Row="2" Background="Transparent" BorderThickness="0"
                          ItemsSource="{Binding ConversationsView}" SelectedItem="{Binding SelectedConversation}"
-                         HorizontalContentAlignment="Stretch" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                         HorizontalContentAlignment="Stretch" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         VirtualizingPanel.IsVirtualizingWhenGrouping="True" VirtualizingPanel.ScrollUnit="Pixel"
+                         AutomationProperties.Name="{loc:Loc ConversationList}">
                     <ListBox.GroupStyle>
                         <GroupStyle>
                             <GroupStyle.HeaderTemplate>
                                 <DataTemplate>
-                                    <TextBlock Text="{Binding Name}" Foreground="{StaticResource MutedForegroundBrush}" FontSize="11" FontWeight="SemiBold" Margin="14,10,0,3" />
+                                    <TextBlock Text="{Binding Name}" Foreground="{DynamicResource MutedForegroundBrush}" FontSize="11" FontWeight="SemiBold" Margin="14,10,0,3" />
                                 </DataTemplate>
                             </GroupStyle.HeaderTemplate>
                         </GroupStyle>
@@ -212,31 +235,33 @@
                                             <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="*" />
                                         </Grid.ColumnDefinitions>
-                                        <Path Grid.Column="0" Data="{StaticResource IconPin}" Width="11" Height="11" Stretch="Uniform" Fill="{StaticResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,5,0"
+                                        <Path Grid.Column="0" Data="{StaticResource IconPin}" Width="11" Height="11" Stretch="Uniform" Fill="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,5,0"
                                               Visibility="{Binding Pinned, Converter={StaticResource BoolToVis}}" />
-                                        <TextBlock Grid.Column="1" Text="{Binding Title}" Foreground="{StaticResource ForegroundBrush}" FontSize="13"
+                                        <TextBlock Grid.Column="1" Text="{Binding Title}" Foreground="{DynamicResource ForegroundBrush}" FontSize="13"
                                                    TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" ToolTip="{Binding Title}" />
                                     </Grid>
                                     <Grid Margin="0,2,0,0">
-                                        <TextBlock x:Name="ConvSubtitle" Text="{Binding Subtitle}" Foreground="{StaticResource MutedForegroundBrush}" FontSize="11" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock x:Name="ConvSubtitle" Text="{Binding Subtitle}" Foreground="{DynamicResource MutedForegroundBrush}" FontSize="11" TextTrimming="CharacterEllipsis" />
                                         <!-- 응답 생성 중 표시 -->
                                         <StackPanel x:Name="ConvBusy" Orientation="Horizontal" Visibility="Collapsed">
-                                            <Ellipse x:Name="BDot1" Width="5" Height="5" Margin="0,0,4,0" VerticalAlignment="Center" Fill="{StaticResource AccentBrush}" Opacity="0.35" />
-                                            <Ellipse x:Name="BDot2" Width="5" Height="5" Margin="0,0,4,0" VerticalAlignment="Center" Fill="{StaticResource AccentBrush}" Opacity="0.35" />
-                                            <Ellipse x:Name="BDot3" Width="5" Height="5" Margin="0,0,6,0" VerticalAlignment="Center" Fill="{StaticResource AccentBrush}" Opacity="0.35" />
-                                            <TextBlock Text="{loc:Loc Generating}" Foreground="{StaticResource AccentBrush}" FontSize="11" VerticalAlignment="Center" />
+                                            <Ellipse x:Name="Dot1" Width="5" Height="5" Margin="0,0,4,0" VerticalAlignment="Center" Fill="{DynamicResource AccentBrush}" Opacity="0.3" />
+                                            <Ellipse x:Name="Dot2" Width="5" Height="5" Margin="0,0,4,0" VerticalAlignment="Center" Fill="{DynamicResource AccentBrush}" Opacity="0.3" />
+                                            <Ellipse x:Name="Dot3" Width="5" Height="5" Margin="0,0,6,0" VerticalAlignment="Center" Fill="{DynamicResource AccentBrush}" Opacity="0.3" />
+                                            <TextBlock Text="{loc:Loc Generating}" Foreground="{DynamicResource AccentBrush}" FontSize="11" VerticalAlignment="Center" />
                                         </StackPanel>
                                     </Grid>
                                 </StackPanel>
 
                                 <!-- 인라인 이름 변경: Enter/포커스 잃음 = 확정, Esc = 취소 -->
                                 <TextBox x:Name="RenamePanel" Grid.Column="0" Text="{Binding RenameText, UpdateSourceTrigger=PropertyChanged}" Visibility="Collapsed" Padding="6,4" FontSize="13"
+                                         AutomationProperties.Name="{loc:Loc TipRename}"
                                          behaviors:FocusBehavior.FocusWhenVisible="True" behaviors:FocusBehavior.SelectAll="True"
                                          behaviors:TextBoxCommitBehavior.CommitCommand="{Binding DataContext.CommitRenameCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
                                          behaviors:TextBoxCommitBehavior.CancelCommand="{Binding DataContext.CancelRenameCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
                                          behaviors:TextBoxCommitBehavior.CommandParameter="{Binding}" />
 
-                                <StackPanel x:Name="Actions" Grid.Column="1" Orientation="Horizontal" Visibility="Hidden">
+                                <!-- 평소엔 자리를 차지하지 않다가 마우스를 올리거나 줄을 고르면 나타난다(키보드로 고른 줄에서도 버튼에 닿을 수 있다). -->
+                                <StackPanel x:Name="Actions" Grid.Column="1" Orientation="Horizontal" Visibility="Collapsed">
                                     <Button Command="{Binding DataContext.PinConversationCommand, RelativeSource={RelativeSource AncestorType=ListBox}}" CommandParameter="{Binding}"
                                             Style="{StaticResource SubtleButtonStyle}" Padding="6" ToolTip="{loc:Loc TipPinToggle}">
                                         <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconPin}" Width="14" Height="14" />
@@ -255,17 +280,14 @@
                                 <Trigger SourceName="ConvRow" Property="IsMouseOver" Value="True">
                                     <Setter TargetName="Actions" Property="Visibility" Value="Visible" />
                                 </Trigger>
+                                <DataTrigger Binding="{Binding IsKeyboardFocusWithin, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True">
+                                    <Setter TargetName="Actions" Property="Visibility" Value="Visible" />
+                                </DataTrigger>
                                 <DataTrigger Binding="{Binding IsStreaming}" Value="True">
                                     <Setter TargetName="ConvSubtitle" Property="Visibility" Value="Collapsed" />
                                     <Setter TargetName="ConvBusy" Property="Visibility" Value="Visible" />
                                     <DataTrigger.EnterActions>
-                                        <BeginStoryboard x:Name="ConvBusySb">
-                                            <Storyboard RepeatBehavior="Forever">
-                                                <DoubleAnimation Storyboard.TargetName="BDot1" Storyboard.TargetProperty="Opacity" From="0.35" To="1" Duration="0:0:0.45" AutoReverse="True" />
-                                                <DoubleAnimation Storyboard.TargetName="BDot2" Storyboard.TargetProperty="Opacity" From="0.35" To="1" BeginTime="0:0:0.15" Duration="0:0:0.45" AutoReverse="True" />
-                                                <DoubleAnimation Storyboard.TargetName="BDot3" Storyboard.TargetProperty="Opacity" From="0.35" To="1" BeginTime="0:0:0.3" Duration="0:0:0.45" AutoReverse="True" />
-                                            </Storyboard>
-                                        </BeginStoryboard>
+                                        <BeginStoryboard x:Name="ConvBusySb" Storyboard="{StaticResource TypingDotsStoryboard}" />
                                     </DataTrigger.EnterActions>
                                     <DataTrigger.ExitActions>
                                         <StopStoryboard BeginStoryboardName="ConvBusySb" />
@@ -284,7 +306,7 @@
                 <StackPanel Grid.Row="3">
                     <!-- 업데이트 안내. 대화 목록 아래에 두어 채팅을 가리지 않는다. -->
                     <Border Margin="12,6,12,2" Padding="10,8" CornerRadius="8"
-                            Background="{StaticResource ControlBackgroundBrush}" BorderBrush="{StaticResource AccentBrush}" BorderThickness="1"
+                            Background="{DynamicResource ControlBackgroundBrush}" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1"
                             Visibility="{Binding HasUpdate, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
                             <Grid>
@@ -293,23 +315,26 @@
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
-                                <Path Grid.Column="0" Data="{StaticResource IconArrowDown}" Width="14" Height="14" Stretch="Uniform" Fill="{StaticResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,7,0" />
-                                <TextBlock Grid.Column="1" Text="{Binding UpdateText}" Foreground="{StaticResource ForegroundBrush}" FontSize="11.5" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                <Path Grid.Column="0" Data="{StaticResource IconArrowDown}" Width="14" Height="14" Stretch="Uniform" Fill="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,7,0" />
+                                <TextBlock Grid.Column="1" Text="{Binding UpdateText}" Foreground="{DynamicResource ForegroundBrush}" FontSize="11.5" TextWrapping="Wrap" VerticalAlignment="Center" />
                                 <Button Grid.Column="2" Command="{Binding DismissUpdateCommand}" Style="{StaticResource SubtleButtonStyle}" Padding="4" Margin="4,0,0,0" ToolTip="{loc:Loc Later}"
                                         Visibility="{Binding IsUpdateIdle, Converter={StaticResource BoolToVis}}">
                                     <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconClose}" Width="10" Height="10" />
                                 </Button>
                             </Grid>
 
-                            <!-- 대기 상태: 설치 버튼 -->
+                            <!-- 대기 상태: 설치 버튼 + 무엇이 바뀌었는지 -->
                             <Button Command="{Binding InstallUpdateCommand}" Style="{StaticResource AccentButtonStyle}" Content="{loc:Loc UpdateNow}"
                                     Padding="0,6" Margin="0,8,0,0" FontSize="12"
+                                    Visibility="{Binding IsUpdateIdle, Converter={StaticResource BoolToVis}}" />
+                            <Button Command="{Binding OpenReleaseNotesCommand}" Style="{StaticResource SubtleButtonStyle}" Content="{loc:Loc WhatsNew}"
+                                    Padding="0,4" Margin="0,4,0,0" FontSize="11.5"
                                     Visibility="{Binding IsUpdateIdle, Converter={StaticResource BoolToVis}}" />
 
                             <!-- 진행 상태: 진행률 -->
                             <StackPanel Margin="0,8,0,0" Visibility="{Binding IsUpdating, Converter={StaticResource BoolToVis}}">
                                 <ProgressBar Value="{Binding UpdateProgress, Mode=OneWay}" Maximum="100" Style="{StaticResource MeterProgressStyle}" />
-                                <TextBlock Text="{Binding UpdateProgressText}" Foreground="{StaticResource MutedForegroundBrush}" FontSize="10.5" Margin="0,5,0,0" />
+                                <TextBlock Text="{Binding UpdateProgressText}" Foreground="{DynamicResource MutedForegroundBrush}" FontSize="10.5" Margin="0,5,0,0" />
                             </StackPanel>
                         </StackPanel>
                     </Border>
@@ -317,59 +342,66 @@
                     <!-- 현재 버전. 누르면 수동으로 새 버전을 확인한다. -->
                     <Button Command="{Binding CheckUpdateCommand}" Style="{StaticResource SubtleButtonStyle}" HorizontalAlignment="Center"
                             Margin="0,6,0,8" Padding="10,3" ToolTip="{loc:Loc TipCheckUpdate}">
-                        <TextBlock Text="{Binding AppVersionText}" Foreground="{StaticResource MutedForegroundBrush}" FontSize="11" />
+                        <TextBlock Text="{Binding AppVersionText}" Foreground="{DynamicResource MutedForegroundBrush}" FontSize="11" />
                     </Button>
                 </StackPanel>
             </Grid>
         </Border>
 
         <!-- ===== 우측: 채팅 영역 (이미지 파일을 어디에 놓아도 첨부) ===== -->
-        <Grid Grid.Column="1" behaviors:InputBehaviors.DropFilesCommand="{Binding AttachFilesCommand}">
+        <Grid x:Name="ChatArea" Grid.Column="1" behaviors:InputBehaviors.DropFilesCommand="{Binding AttachFilesCommand}">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
                 <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <!-- 헤더 -->
-            <Grid Grid.Row="0" Margin="20,14,20,6">
+            <!-- 헤더: 자주 쓰는 것만 밖에 두고 나머지는 ⋯ 메뉴로 묶는다(삭제 같은 되돌리기 어려운 동작이 다른 아이콘 사이에 섞이지 않게). -->
+            <Grid Grid.Row="0" Margin="20,12,14,6">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <TextBlock Grid.Column="0" Text="{Binding SelectedConversation.Title}" Foreground="{StaticResource ForegroundBrush}" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,12,0" />
+                <TextBlock Grid.Column="0" Text="{Binding SelectedConversation.Title}" Foreground="{DynamicResource ForegroundBrush}" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,12,0" />
                 <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Command="{Binding OpenFindCommand}" Style="{StaticResource SubtleButtonStyle}" Padding="8" ToolTip="{loc:Loc TipFind}">
+                        <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconSearch}" Width="17" Height="17" />
+                    </Button>
                     <Button Command="{Binding ToggleAdvancedCommand}" Style="{StaticResource SubtleButtonStyle}" Padding="8" ToolTip="{loc:Loc TipAdvanced}">
                         <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconTune}" Width="17" Height="17" />
                     </Button>
-                    <Button Command="{Binding RegenerateLastCommand}" Style="{StaticResource SubtleButtonStyle}" Padding="8" ToolTip="{loc:Loc TipRegenLast}">
-                        <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconRefresh}" Width="17" Height="17" />
-                    </Button>
-                    <Button Command="{Binding CopyConversationCommand}" Style="{StaticResource SubtleButtonStyle}" Padding="8" ToolTip="{loc:Loc TipCopyConversation}">
-                        <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconCopy}" Width="17" Height="17" />
-                    </Button>
-                    <Button Command="{Binding ExportConversationCommand}" Style="{StaticResource SubtleButtonStyle}" Padding="8" ToolTip="{loc:Loc TipExportMarkdown}">
-                        <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconExport}" Width="17" Height="17" />
-                    </Button>
-                    <Button Command="{Binding ClearMessagesCommand}" Style="{StaticResource SubtleButtonStyle}" Padding="8" ToolTip="{loc:Loc TipClearMessages}">
-                        <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconDelete}" Width="17" Height="17" />
+                    <Button Style="{StaticResource SubtleButtonStyle}" Padding="8" ToolTip="{loc:Loc TipMore}" behaviors:MenuBehaviors.IsDropDown="True">
+                        <Button.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="{loc:Loc MenuRegenLast}" InputGestureText="Ctrl+R" Command="{Binding RegenerateLastCommand}" />
+                                <MenuItem Header="{loc:Loc MenuCopyConversation}" InputGestureText="Ctrl+Shift+C" Command="{Binding CopyConversationCommand}" />
+                                <MenuItem Header="{loc:Loc MenuExportMarkdown}" InputGestureText="Ctrl+E" Command="{Binding ExportConversationCommand}" />
+                                <Separator />
+                                <MenuItem Header="{loc:Loc MenuBackupAll}" Command="{Binding BackupAllCommand}" />
+                                <MenuItem Header="{loc:Loc MenuImportBackup}" Command="{Binding ImportBackupCommand}" />
+                                <Separator />
+                                <MenuItem Header="{loc:Loc MenuClearMessages}" Command="{Binding ClearMessagesCommand}" />
+                            </ContextMenu>
+                        </Button.ContextMenu>
+                        <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconDotsHorizontal}" Width="17" Height="17" />
                     </Button>
                 </StackPanel>
             </Grid>
 
             <!-- 고급 패널 -->
-            <Border Grid.Row="1" Margin="20,4,20,4" Padding="16" Background="{StaticResource CardBackgroundBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="10"
+            <Border Grid.Row="1" Margin="20,4,20,4" Padding="16" Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="10"
                     Visibility="{Binding IsAdvancedOpen, Converter={StaticResource BoolToVis}}">
                 <StackPanel>
                     <!-- 이 대화의 모델별 사용량. 대화 중 모델을 바꾸면 항목이 늘어난다. -->
                     <StackPanel Margin="0,0,0,16" Visibility="{Binding SelectedConversation.HasUsage, Converter={StaticResource BoolToVis}}">
                         <Grid Margin="0,0,0,7">
-                            <TextBlock Text="{loc:Loc ConversationUsage}" Foreground="{StaticResource SecondaryForegroundBrush}" FontSize="12" />
-                            <TextBlock Text="{Binding SelectedConversation.UsageSummary}" HorizontalAlignment="Right" Foreground="{StaticResource MutedForegroundBrush}" FontSize="11.5" />
+                            <TextBlock Text="{loc:Loc ConversationUsage}" Foreground="{DynamicResource SecondaryForegroundBrush}" FontSize="12" />
+                            <TextBlock Text="{Binding SelectedConversation.UsageSummary}" HorizontalAlignment="Right" Foreground="{DynamicResource MutedForegroundBrush}" FontSize="11.5" />
                         </Grid>
-                        <ItemsControl ItemsSource="{Binding SelectedConversation.Usage}">
+                        <ItemsControl ItemsSource="{Binding SelectedConversation.Usage}" Focusable="False">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Grid Margin="0,0,0,4">
@@ -378,19 +410,20 @@
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
                                         <StackPanel Grid.Column="0" Margin="0,0,12,0">
-                                            <TextBlock Text="{Binding ShortName}" Foreground="{StaticResource ForegroundBrush}" FontSize="12.5" TextTrimming="CharacterEllipsis" ToolTip="{Binding ModelId}" />
-                                            <TextBlock Text="{Binding DetailText}" Foreground="{StaticResource MutedForegroundBrush}" FontSize="11" Margin="0,1,0,0" />
+                                            <TextBlock Text="{Binding ShortName}" Foreground="{DynamicResource ForegroundBrush}" FontSize="12.5" TextTrimming="CharacterEllipsis" ToolTip="{Binding ModelId}" />
+                                            <TextBlock Text="{Binding DetailText}" Foreground="{DynamicResource MutedForegroundBrush}" FontSize="11" Margin="0,1,0,0" />
                                         </StackPanel>
-                                        <TextBlock Grid.Column="1" Text="{Binding TotalText}" Foreground="{StaticResource AccentBrush}" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="1" Text="{Binding TotalText}" Foreground="{DynamicResource AccentBrush}" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
                                     </Grid>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
-                        <Border Height="1" Background="{StaticResource BorderBrush}" Margin="0,10,0,0" />
+                        <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="0,10,0,0" />
                     </StackPanel>
 
-                    <TextBlock Text="{loc:Loc SystemPrompt}" Foreground="{StaticResource SecondaryForegroundBrush}" FontSize="12" Margin="0,0,0,5" />
-                    <TextBox Text="{Binding SelectedConversation.SystemPrompt, UpdateSourceTrigger=PropertyChanged}" Tag="{loc:Loc PhSystemPrompt}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="54" MaxHeight="120" VerticalScrollBarVisibility="Auto" />
+                    <TextBlock Text="{loc:Loc SystemPrompt}" Foreground="{DynamicResource SecondaryForegroundBrush}" FontSize="12" Margin="0,0,0,5" />
+                    <TextBox Text="{Binding SelectedConversation.SystemPrompt, UpdateSourceTrigger=PropertyChanged}" Tag="{loc:Loc PhSystemPrompt}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="54" MaxHeight="120" VerticalScrollBarVisibility="Auto"
+                             AutomationProperties.Name="{loc:Loc SystemPrompt}" />
                     <Grid Margin="0,14,0,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
@@ -399,34 +432,40 @@
                         </Grid.ColumnDefinitions>
                         <StackPanel Grid.Column="0">
                             <Grid Margin="0,0,0,10">
-                                <TextBlock Text="Temperature" Foreground="{StaticResource SecondaryForegroundBrush}" FontSize="12" />
-                                <TextBlock HorizontalAlignment="Right" Foreground="{StaticResource AccentBrush}" FontSize="12" Text="{Binding Value, ElementName=TemperatureSlider, StringFormat=F2}" />
+                                <TextBlock Text="Temperature" Foreground="{DynamicResource SecondaryForegroundBrush}" FontSize="12" />
+                                <TextBlock HorizontalAlignment="Right" Foreground="{DynamicResource AccentBrush}" FontSize="12" Text="{Binding Value, ElementName=TemperatureSlider, StringFormat=F2}" />
                             </Grid>
-                            <Slider x:Name="TemperatureSlider" Minimum="0" Maximum="2" SmallChange="0.01" LargeChange="0.1" Value="{Binding SelectedConversation.Parameters.Temperature, Mode=TwoWay}" Margin="0,0,0,14" />
+                            <Slider x:Name="TemperatureSlider" Minimum="0" Maximum="2" SmallChange="0.01" LargeChange="0.1" Value="{Binding SelectedConversation.Parameters.Temperature, Mode=TwoWay}" Margin="0,0,0,14" AutomationProperties.Name="Temperature" />
                             <Grid Margin="0,0,0,10">
-                                <TextBlock Text="Top P" Foreground="{StaticResource SecondaryForegroundBrush}" FontSize="12" />
-                                <TextBlock HorizontalAlignment="Right" Foreground="{StaticResource AccentBrush}" FontSize="12" Text="{Binding Value, ElementName=TopPSlider, StringFormat=F2}" />
+                                <TextBlock Text="Top P" Foreground="{DynamicResource SecondaryForegroundBrush}" FontSize="12" />
+                                <TextBlock HorizontalAlignment="Right" Foreground="{DynamicResource AccentBrush}" FontSize="12" Text="{Binding Value, ElementName=TopPSlider, StringFormat=F2}" />
                             </Grid>
-                            <Slider x:Name="TopPSlider" Minimum="0" Maximum="1" SmallChange="0.01" LargeChange="0.1" Value="{Binding SelectedConversation.Parameters.TopP, Mode=TwoWay}" />
+                            <Slider x:Name="TopPSlider" Minimum="0" Maximum="1" SmallChange="0.01" LargeChange="0.1" Value="{Binding SelectedConversation.Parameters.TopP, Mode=TwoWay}" Margin="0,0,0,14" AutomationProperties.Name="Top P" />
+                            <Grid Margin="0,0,0,10">
+                                <TextBlock Text="{loc:Loc MaxTokens}" Foreground="{DynamicResource SecondaryForegroundBrush}" FontSize="12" />
+                                <TextBlock HorizontalAlignment="Right" Foreground="{DynamicResource AccentBrush}" FontSize="12" Text="{Binding Value, ElementName=MaxTokensSlider, StringFormat=N0}" />
+                            </Grid>
+                            <Slider x:Name="MaxTokensSlider" Minimum="256" Maximum="32768" SmallChange="256" LargeChange="1024" TickFrequency="256" IsSnapToTickEnabled="True"
+                                    Value="{Binding SelectedConversation.Parameters.MaxTokens, Mode=TwoWay}" AutomationProperties.Name="{loc:Loc MaxTokens}" />
                         </StackPanel>
                         <StackPanel Grid.Column="2">
                             <Grid Margin="0,0,0,10">
-                                <TextBlock Text="{loc:Loc MaxTokens}" Foreground="{StaticResource SecondaryForegroundBrush}" FontSize="12" />
-                                <TextBlock HorizontalAlignment="Right" Foreground="{StaticResource AccentBrush}" FontSize="12" Text="{Binding Value, ElementName=MaxTokensSlider, StringFormat=F0}" />
+                                <TextBlock Text="Frequency Penalty" Foreground="{DynamicResource SecondaryForegroundBrush}" FontSize="12" />
+                                <TextBlock HorizontalAlignment="Right" Foreground="{DynamicResource AccentBrush}" FontSize="12" Text="{Binding Value, ElementName=FreqSlider, StringFormat=F2}" />
                             </Grid>
-                            <Slider x:Name="MaxTokensSlider" Minimum="256" Maximum="8192" SmallChange="128" LargeChange="512" Value="{Binding SelectedConversation.Parameters.MaxTokens, Mode=TwoWay}" Margin="0,0,0,14" />
+                            <Slider x:Name="FreqSlider" Minimum="-2" Maximum="2" SmallChange="0.01" LargeChange="0.1" Value="{Binding SelectedConversation.Parameters.FrequencyPenalty, Mode=TwoWay}" Margin="0,0,0,14" AutomationProperties.Name="Frequency Penalty" />
                             <Grid Margin="0,0,0,10">
-                                <TextBlock Text="Frequency Penalty" Foreground="{StaticResource SecondaryForegroundBrush}" FontSize="12" />
-                                <TextBlock HorizontalAlignment="Right" Foreground="{StaticResource AccentBrush}" FontSize="12" Text="{Binding Value, ElementName=FreqSlider, StringFormat=F2}" />
+                                <TextBlock Text="Presence Penalty" Foreground="{DynamicResource SecondaryForegroundBrush}" FontSize="12" />
+                                <TextBlock HorizontalAlignment="Right" Foreground="{DynamicResource AccentBrush}" FontSize="12" Text="{Binding Value, ElementName=PresSlider, StringFormat=F2}" />
                             </Grid>
-                            <Slider x:Name="FreqSlider" Minimum="-2" Maximum="2" SmallChange="0.01" LargeChange="0.1" Value="{Binding SelectedConversation.Parameters.FrequencyPenalty, Mode=TwoWay}" />
+                            <Slider x:Name="PresSlider" Minimum="-2" Maximum="2" SmallChange="0.01" LargeChange="0.1" Value="{Binding SelectedConversation.Parameters.PresencePenalty, Mode=TwoWay}" AutomationProperties.Name="Presence Penalty" />
                         </StackPanel>
                     </Grid>
                 </StackPanel>
             </Border>
 
-            <!-- 상태 배너(경고/안내). 사용자가 닫을 수 있다. -->
-            <Border Grid.Row="2" Margin="20,4,20,4" Padding="12,9" Background="{StaticResource CardBackgroundBrush}" BorderBrush="{StaticResource WarnBrush}" BorderThickness="1" CornerRadius="8"
+            <!-- 상태 배너(경고/안내). 사용자가 닫을 수 있고, 실패한 요청은 여기서 바로 다시 시도한다. -->
+            <Border Grid.Row="2" Margin="20,4,20,4" Padding="12,9" Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource WarnBrush}" BorderThickness="1" CornerRadius="8"
                     Visibility="{Binding HasStatusMessage, Converter={StaticResource BoolToVis}}">
                 <Grid>
                     <Grid.ColumnDefinitions>
@@ -434,12 +473,15 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <Path Grid.Column="0" Data="{StaticResource IconAlert}" Width="16" Height="16" Stretch="Uniform" Fill="{StaticResource WarnBrush}" VerticalAlignment="Center" Margin="0,0,10,0" />
-                    <TextBlock Grid.Column="1" Text="{Binding StatusMessage}" Foreground="{StaticResource ForegroundBrush}" TextWrapping="Wrap" VerticalAlignment="Center" FontSize="12.5" />
-                    <Button Grid.Column="2" Command="{Binding OpenSettingsCommand}" Style="{StaticResource SubtleButtonStyle}" Content="{loc:Loc OpenSettings}" Margin="10,0,0,0"
+                    <Path Grid.Column="0" Data="{StaticResource IconAlert}" Width="16" Height="16" Stretch="Uniform" Fill="{DynamicResource WarnBrush}" VerticalAlignment="Center" Margin="0,0,10,0" />
+                    <TextBlock Grid.Column="1" Text="{Binding StatusMessage}" Foreground="{DynamicResource ForegroundBrush}" TextWrapping="Wrap" VerticalAlignment="Center" FontSize="12.5" />
+                    <Button Grid.Column="2" Command="{Binding RetryCommand}" Content="{Binding RetryText}" Padding="12,5" Margin="10,0,0,0" FontSize="12.5"
+                            Visibility="{Binding HasRetry, Converter={StaticResource BoolToVis}}" />
+                    <Button Grid.Column="3" Command="{Binding OpenSettingsCommand}" Style="{StaticResource SubtleButtonStyle}" Content="{loc:Loc OpenSettings}" Margin="10,0,0,0"
                             Visibility="{Binding HasApiKey, Converter={StaticResource InverseBoolToVis}}" />
-                    <Button Grid.Column="3" Command="{Binding DismissStatusCommand}" Style="{StaticResource SubtleButtonStyle}" Padding="6" Margin="6,0,0,0" ToolTip="{loc:Loc TipDismiss}">
+                    <Button Grid.Column="4" Command="{Binding DismissStatusCommand}" Style="{StaticResource SubtleButtonStyle}" Padding="6" Margin="6,0,0,0" ToolTip="{loc:Loc TipDismiss}">
                         <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconClose}" Width="11" Height="11" />
                     </Button>
                 </Grid>
@@ -447,179 +489,65 @@
 
             <!-- 메시지 목록 -->
             <Grid Grid.Row="3">
-                <ScrollViewer x:Name="MessagesScroller" VerticalScrollBarVisibility="Auto" Padding="20,6,14,6" behaviors:AutoScrollBehavior.IsEnabled="True">
-                    <!-- 대화 컬럼을 가운데로 모은다. Stretch + MaxWidth 조합이면 상한까지 늘어난 뒤 남는 공간에서 가운데로 놓인다.
-                         (HorizontalAlignment=Center 는 내용 크기로 줄어들어 버린다) -->
-                    <ItemsControl ItemsSource="{Binding SelectedConversation.Messages}"
-                                  MaxWidth="{StaticResource ConversationColumnWidth}" HorizontalAlignment="Stretch">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate DataType="{x:Type vm:ChatMessageViewModel}">
-                                <Grid x:Name="MsgRow" Margin="0,7">
-                                    <!-- Background=Transparent 로 말풍선+여백+(숨겨진)액션 영역 전체를 히트테스트 대상으로 만들어
-                                         마우스를 버튼으로 내려도 호버가 끊기지 않게 한다. -->
-                                    <StackPanel x:Name="Column" HorizontalAlignment="Left" Background="Transparent">
-                                        <!-- 기본(어시스턴트)은 말풍선을 씌우지 않는다. 본문이 그대로 놓이고, 말풍선은 사용자 메시지에만 씌운다. -->
-                                        <Border x:Name="Bubble" Background="Transparent" BorderThickness="0" CornerRadius="12" Padding="2,2" HorizontalAlignment="Left">
-                                            <StackPanel>
-                                                <!-- 첨부 이미지 -->
-                                                <ItemsControl ItemsSource="{Binding ImageSources}" Margin="0,0,0,8" Visibility="{Binding HasImages, Converter={StaticResource BoolToVis}}">
-                                                    <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-                                                    <ItemsControl.ItemTemplate>
-                                                        <DataTemplate>
-                                                            <Border CornerRadius="8" Margin="0,0,6,6" ClipToBounds="True" MaxHeight="240" MaxWidth="300" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
-                                                                <Image Source="{Binding}" Stretch="Uniform" />
-                                                            </Border>
-                                                        </DataTemplate>
-                                                    </ItemsControl.ItemTemplate>
-                                                </ItemsControl>
-
-                                                <!-- 추론 섹션 -->
-                                                <StackPanel x:Name="ReasoningBox" Visibility="Collapsed" Margin="0,0,0,8">
-                                                    <Button Command="{Binding ToggleReasoningCommand}" Style="{StaticResource SubtleButtonStyle}" HorizontalAlignment="Left" Padding="6,3">
-                                                        <StackPanel Orientation="Horizontal">
-                                                            <Path x:Name="ReasoningChevron" Style="{StaticResource IconStyle}" Data="{StaticResource IconChevronRight}" Width="12" Height="12" />
-                                                            <TextBlock Text="{loc:Loc Reasoning}" Margin="6,0,0,0" VerticalAlignment="Center" FontSize="12" />
-                                                        </StackPanel>
-                                                    </Button>
-                                                    <Border x:Name="ReasoningBody" Visibility="Collapsed" Background="{StaticResource CodeBlockBackgroundBrush}" CornerRadius="6" Padding="10,8" Margin="0,4,0,0">
-                                                        <TextBlock Text="{Binding Reasoning}" Foreground="{StaticResource SecondaryForegroundBrush}" TextWrapping="Wrap" FontSize="12.5" LineHeight="19" />
-                                                    </Border>
-                                                </StackPanel>
-
-                                                <!-- 편집 모드 -->
-                                                <StackPanel x:Name="EditPanel" Visibility="Collapsed">
-                                                    <TextBox Text="{Binding EditText, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="Wrap" MinWidth="360" MaxHeight="240" VerticalScrollBarVisibility="Auto" behaviors:FocusBehavior.FocusWhenVisible="True" />
-                                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
-                                                        <Button Content="{loc:Loc Cancel}" Command="{Binding CancelEditCommand}" Style="{StaticResource SubtleButtonStyle}" Padding="12,5" Margin="0,0,8,0" />
-                                                        <Button Content="{loc:Loc SaveAndRegen}" Style="{StaticResource AccentButtonStyle}" Padding="14,5"
-                                                                Command="{Binding DataContext.SubmitEditCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}" />
-                                                    </StackPanel>
-                                                </StackPanel>
-
-                                                <!-- 본문 -->
-                                                <TextBlock x:Name="RawText" Text="{Binding Content}" Foreground="{StaticResource ForegroundBrush}" TextWrapping="Wrap"
-                                                           Visibility="{Binding ShowMarkdown, Converter={StaticResource InverseBoolToVis}}" />
-                                                <controls:MarkdownPresenter x:Name="Markdown" Markdown="{Binding Content}" Visibility="{Binding ShowMarkdown, Converter={StaticResource BoolToVis}}" />
-
-                                                <!-- 타이핑 대기 애니메이션: 텍스트 한 줄 높이 안에서 점만 움직인다 -->
-                                                <StackPanel x:Name="Typing" Orientation="Horizontal" Visibility="Collapsed" Height="19" VerticalAlignment="Center">
-                                                    <Ellipse x:Name="Dot1" Width="7" Height="7" Margin="0,0,5,0" VerticalAlignment="Center" Fill="{StaticResource AccentBrush}" Opacity="0.35" />
-                                                    <Ellipse x:Name="Dot2" Width="7" Height="7" Margin="0,0,5,0" VerticalAlignment="Center" Fill="{StaticResource AccentBrush}" Opacity="0.35" />
-                                                    <Ellipse x:Name="Dot3" Width="7" Height="7" VerticalAlignment="Center" Fill="{StaticResource AccentBrush}" Opacity="0.35" />
-                                                </StackPanel>
-
-                                                <Border x:Name="AbortedChip" Visibility="Collapsed" HorizontalAlignment="Left" Margin="0,6,0,0" Padding="6,2" CornerRadius="4" Background="{StaticResource InlineCodeBackgroundBrush}">
-                                                    <TextBlock Text="{loc:Loc Aborted}" Foreground="{StaticResource MutedForegroundBrush}" FontSize="11" />
-                                                </Border>
-                                            </StackPanel>
-                                        </Border>
-
-                                        <!-- 액션바: 말풍선 밖 하단 -->
-                                        <StackPanel x:Name="MsgActions" Orientation="Horizontal" Margin="4,4,4,0" HorizontalAlignment="Left" Visibility="Hidden">
-                                            <Button Command="{Binding DataContext.CopyMessageCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"
-                                                    Style="{StaticResource SubtleButtonStyle}" Padding="6,3" ToolTip="{loc:Loc Copy}">
-                                                <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconCopy}" Width="14" Height="14" />
-                                            </Button>
-                                            <Button x:Name="EditBtn" Command="{Binding BeginEditCommand}" Style="{StaticResource SubtleButtonStyle}" Padding="6,3" Visibility="Collapsed" ToolTip="{loc:Loc TipEditRegen}">
-                                                <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconPencil}" Width="14" Height="14" />
-                                            </Button>
-                                            <Button x:Name="RegenBtn" Command="{Binding DataContext.RegenerateMessageCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"
-                                                    Style="{StaticResource SubtleButtonStyle}" Padding="6,3" Visibility="Collapsed" ToolTip="{loc:Loc Regenerate}">
-                                                <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconRefresh}" Width="14" Height="14" />
-                                            </Button>
-                                            <Button Command="{Binding DataContext.DeleteMessageCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"
-                                                    Style="{StaticResource SubtleButtonStyle}" Padding="6,3" ToolTip="{loc:Loc Delete}">
-                                                <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconDelete}" Width="14" Height="14" />
-                                            </Button>
-                                            <TextBlock Text="{Binding TimestampText}" Foreground="{StaticResource MutedForegroundBrush}" FontSize="11" VerticalAlignment="Center" Margin="6,0,0,0" />
-                                        </StackPanel>
-                                    </StackPanel>
-                                </Grid>
-                                <DataTemplate.Triggers>
-                                    <DataTrigger Binding="{Binding IsUser}" Value="True">
-                                        <Setter TargetName="Column" Property="HorizontalAlignment" Value="Right" />
-                                        <Setter TargetName="Bubble" Property="HorizontalAlignment" Value="Right" />
-                                        <Setter TargetName="Bubble" Property="Background" Value="{StaticResource UserBubbleBackgroundBrush}" />
-                                        <Setter TargetName="Bubble" Property="BorderBrush" Value="{StaticResource UserBubbleBorderBrush}" />
-                                        <Setter TargetName="Bubble" Property="BorderThickness" Value="1" />
-                                        <Setter TargetName="Bubble" Property="Padding" Value="14,10" />
-                                        <Setter TargetName="MsgActions" Property="HorizontalAlignment" Value="Right" />
-                                        <Setter TargetName="EditBtn" Property="Visibility" Value="Visible" />
-                                    </DataTrigger>
-                                    <DataTrigger Binding="{Binding IsAssistant}" Value="True">
-                                        <Setter TargetName="RegenBtn" Property="Visibility" Value="Visible" />
-                                    </DataTrigger>
-                                    <DataTrigger Binding="{Binding HasReasoning}" Value="True">
-                                        <Setter TargetName="ReasoningBox" Property="Visibility" Value="Visible" />
-                                    </DataTrigger>
-                                    <DataTrigger Binding="{Binding IsReasoningExpanded}" Value="True">
-                                        <Setter TargetName="ReasoningBody" Property="Visibility" Value="Visible" />
-                                        <Setter TargetName="ReasoningChevron" Property="Data" Value="{StaticResource IconChevronDown}" />
-                                    </DataTrigger>
-                                    <DataTrigger Binding="{Binding HasError}" Value="True">
-                                        <Setter TargetName="RawText" Property="Foreground" Value="{StaticResource ErrorBrush}" />
-                                        <!-- 오류는 눈에 띄어야 하므로 어시스턴트라도 테두리를 씌운다. -->
-                                        <Setter TargetName="Bubble" Property="BorderBrush" Value="{StaticResource ErrorBrush}" />
-                                        <Setter TargetName="Bubble" Property="BorderThickness" Value="1" />
-                                        <Setter TargetName="Bubble" Property="Padding" Value="14,10" />
-                                    </DataTrigger>
-                                    <DataTrigger Binding="{Binding Aborted}" Value="True">
-                                        <Setter TargetName="AbortedChip" Property="Visibility" Value="Visible" />
-                                    </DataTrigger>
-                                    <DataTrigger Binding="{Binding IsWaiting}" Value="True">
-                                        <Setter TargetName="Typing" Property="Visibility" Value="Visible" />
-                                        <!-- 대기 중에는 빈 본문이 자리를 차지하지 않도록 숨겨 말풍선을 점 크기로 유지. -->
-                                        <Setter TargetName="RawText" Property="Visibility" Value="Collapsed" />
-                                        <Setter TargetName="Markdown" Property="Visibility" Value="Collapsed" />
-                                        <DataTrigger.EnterActions>
-                                            <BeginStoryboard x:Name="TypingSb">
-                                                <Storyboard RepeatBehavior="Forever">
-                                                    <DoubleAnimation Storyboard.TargetName="Dot1" Storyboard.TargetProperty="Opacity" From="0.35" To="1" Duration="0:0:0.45" AutoReverse="True" />
-                                                    <DoubleAnimation Storyboard.TargetName="Dot2" Storyboard.TargetProperty="Opacity" From="0.35" To="1" BeginTime="0:0:0.15" Duration="0:0:0.45" AutoReverse="True" />
-                                                    <DoubleAnimation Storyboard.TargetName="Dot3" Storyboard.TargetProperty="Opacity" From="0.35" To="1" BeginTime="0:0:0.3" Duration="0:0:0.45" AutoReverse="True" />
-                                                </Storyboard>
-                                            </BeginStoryboard>
-                                        </DataTrigger.EnterActions>
-                                        <DataTrigger.ExitActions>
-                                            <StopStoryboard BeginStoryboardName="TypingSb" />
-                                        </DataTrigger.ExitActions>
-                                    </DataTrigger>
-                                    <!-- 호버 트리거를 먼저 두고, 편집 중 숨김을 뒤에 둬서(나중 선언 우선) 편집 중에는 액션바가 뜨지 않게 한다. -->
-                                    <Trigger SourceName="MsgRow" Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="MsgActions" Property="Visibility" Value="Visible" />
-                                    </Trigger>
-                                    <DataTrigger Binding="{Binding IsEditing}" Value="True">
-                                        <Setter TargetName="EditPanel" Property="Visibility" Value="Visible" />
-                                        <Setter TargetName="RawText" Property="Visibility" Value="Collapsed" />
-                                        <Setter TargetName="Markdown" Property="Visibility" Value="Collapsed" />
-                                        <Setter TargetName="MsgActions" Property="Visibility" Value="Collapsed" />
-                                    </DataTrigger>
-                                </DataTemplate.Triggers>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </ScrollViewer>
+                <ItemsControl x:Name="MessagesList" Style="{StaticResource ChatMessageListStyle}" Padding="20,6,14,6"
+                              ItemsSource="{Binding SelectedConversation.Messages}"
+                              behaviors:ChatScroll.BringIntoView="{Binding FindCurrent}" />
 
                 <!-- 빈 상태 -->
-                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="560"
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="600" Margin="20,0"
                             Visibility="{Binding SelectedConversation.IsEmpty, Converter={StaticResource BoolToVis}}">
                     <Image Source="pack://application:,,,/NvChat;component/Resources/brand.png" Width="60" Height="60" HorizontalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality" />
-                    <TextBlock Text="{loc:Loc EmptyStateTitle}" Foreground="{StaticResource ForegroundBrush}" FontSize="17" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,16,0,4" />
-                    <TextBlock Text="{loc:Loc EmptyStateSubtitle}" Foreground="{StaticResource MutedForegroundBrush}" FontSize="12.5" HorizontalAlignment="Center" Margin="0,0,0,18" />
-                    <ItemsControl ItemsSource="{Binding ExamplePrompts}" HorizontalAlignment="Center">
-                        <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel HorizontalAlignment="Center" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                    <TextBlock Text="{loc:Loc EmptyStateTitle}" Foreground="{DynamicResource ForegroundBrush}" FontSize="20" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,16,0,4" />
+                    <TextBlock Text="{loc:Loc EmptyStateSubtitle}" Foreground="{DynamicResource MutedForegroundBrush}" FontSize="13" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" Margin="0,0,0,20" />
+                    <ItemsControl ItemsSource="{Binding ExamplePrompts}" HorizontalAlignment="Center" Focusable="False">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel HorizontalAlignment="Center" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Button Content="{Binding}" Margin="5" Command="{Binding DataContext.UseExamplePromptCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}" />
+                                <Button Content="{Binding}" Margin="5" Padding="14,9" Command="{Binding DataContext.UseExamplePromptCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}" />
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                 </StackPanel>
 
+                <!-- 대화 내 찾기 막대(Ctrl+F) -->
+                <Border HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,4,26,0" Padding="6" CornerRadius="10"
+                        Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderStrongBrush}" BorderThickness="1"
+                        Visibility="{Binding IsFindOpen, Converter={StaticResource BoolToVis}}">
+                    <Border.Effect>
+                        <DropShadowEffect BlurRadius="14" ShadowDepth="2" Opacity="0.35" Color="Black" />
+                    </Border.Effect>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBox Width="220" Text="{Binding FindText, UpdateSourceTrigger=PropertyChanged}" Tag="{loc:Loc PhFind}" FontSize="12.5" Padding="8,5"
+                                 AutomationProperties.Name="{loc:Loc PhFind}"
+                                 behaviors:FocusBehavior.FocusToken="{Binding FindFocusToken}" behaviors:FocusBehavior.SelectAll="True">
+                            <TextBox.InputBindings>
+                                <KeyBinding Key="Enter" Command="{Binding FindNextCommand}" />
+                                <KeyBinding Modifiers="Shift" Key="Enter" Command="{Binding FindPreviousCommand}" />
+                                <KeyBinding Key="Escape" Command="{Binding CloseFindCommand}" />
+                            </TextBox.InputBindings>
+                        </TextBox>
+                        <TextBlock Text="{Binding FindStatus}" Foreground="{DynamicResource MutedForegroundBrush}" FontSize="11.5" VerticalAlignment="Center" MinWidth="52" TextAlignment="Center" Margin="6,0,2,0" />
+                        <Button Command="{Binding FindPreviousCommand}" Style="{StaticResource SubtleButtonStyle}" Padding="6" ToolTip="{loc:Loc TipFindPrevious}">
+                            <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconChevronUp}" Width="14" Height="14" />
+                        </Button>
+                        <Button Command="{Binding FindNextCommand}" Style="{StaticResource SubtleButtonStyle}" Padding="6" ToolTip="{loc:Loc TipFindNext}">
+                            <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconChevronDown}" Width="14" Height="14" />
+                        </Button>
+                        <Button Command="{Binding CloseFindCommand}" Style="{StaticResource SubtleButtonStyle}" Padding="7" ToolTip="{loc:Loc TipDismiss}">
+                            <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconClose}" Width="11" Height="11" />
+                        </Button>
+                    </StackPanel>
+                </Border>
+
                 <!-- 맨 아래로: 목록이 끝에 있지 않을 때만 보인다 -->
-                <Button HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,22,10" Width="36" Height="36"
-                        Background="{StaticResource CardBackgroundBrush}" BorderBrush="{StaticResource BorderStrongBrush}" Foreground="{StaticResource ForegroundBrush}" ToolTip="{loc:Loc TipScrollBottom}"
-                        behaviors:ScrollToBottomBehavior.Target="{Binding ElementName=MessagesScroller}">
+                <Button HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,26,10" Width="36" Height="36"
+                        Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderStrongBrush}" Foreground="{DynamicResource ForegroundBrush}" ToolTip="{loc:Loc TipScrollBottom}"
+                        behaviors:ChatScroll.ScrollToBottomOf="{Binding ElementName=MessagesList}"
+                        Visibility="{Binding (behaviors:ChatScroll.IsAtBottom), ElementName=MessagesList, Converter={StaticResource InverseBoolToVis}}">
                     <Button.Template>
                         <ControlTemplate TargetType="Button">
                             <Border x:Name="Bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" CornerRadius="18">
@@ -627,19 +555,23 @@
                             </Border>
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="Bd" Property="Background" Value="{StaticResource ControlHoverBackgroundBrush}" />
+                                    <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ControlHoverBackgroundBrush}" />
                                 </Trigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
                     </Button.Template>
                 </Button>
 
-                <!-- 토스트(복사됨 등): 잠깐 떠서 사라진다 -->
-                <Border HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,14" Padding="14,8" CornerRadius="8" IsHitTestVisible="False" Opacity="0"
-                        Background="{StaticResource CardBackgroundBrush}" BorderBrush="{StaticResource BorderStrongBrush}" BorderThickness="1">
+                <!-- 토스트(복사됨·삭제됨 등): 잠깐 떠서 사라진다. 실행 취소 같은 동작 버튼이 붙을 수 있다. -->
+                <Border HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,14" Padding="14,7,8,7" CornerRadius="9" Opacity="0"
+                        IsHitTestVisible="{Binding IsToastVisible}"
+                        Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderStrongBrush}" BorderThickness="1">
                     <Border.Effect>
                         <DropShadowEffect BlurRadius="14" ShadowDepth="2" Opacity="0.4" Color="Black" />
                     </Border.Effect>
+                    <Border.RenderTransform>
+                        <TranslateTransform Y="8" />
+                    </Border.RenderTransform>
                     <Border.Style>
                         <Style TargetType="Border">
                             <Style.Triggers>
@@ -647,7 +579,12 @@
                                     <DataTrigger.EnterActions>
                                         <BeginStoryboard>
                                             <Storyboard>
-                                                <DoubleAnimation Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.15" />
+                                                <DoubleAnimation Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.16" />
+                                                <DoubleAnimation Storyboard.TargetProperty="RenderTransform.Y" To="0" Duration="0:0:0.2">
+                                                    <DoubleAnimation.EasingFunction>
+                                                        <CubicEase EasingMode="EaseOut" />
+                                                    </DoubleAnimation.EasingFunction>
+                                                </DoubleAnimation>
                                             </Storyboard>
                                         </BeginStoryboard>
                                     </DataTrigger.EnterActions>
@@ -655,6 +592,7 @@
                                         <BeginStoryboard>
                                             <Storyboard>
                                                 <DoubleAnimation Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.25" />
+                                                <DoubleAnimation Storyboard.TargetProperty="RenderTransform.Y" To="8" Duration="0:0:0.25" />
                                             </Storyboard>
                                         </BeginStoryboard>
                                     </DataTrigger.ExitActions>
@@ -662,17 +600,28 @@
                             </Style.Triggers>
                         </Style>
                     </Border.Style>
-                    <TextBlock Text="{Binding ToastText}" Foreground="{StaticResource ForegroundBrush}" FontSize="12.5" />
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="{Binding ToastText}" Foreground="{DynamicResource ForegroundBrush}" FontSize="12.5" VerticalAlignment="Center" Margin="0,0,6,0" />
+                        <Button Command="{Binding InvokeToastActionCommand}" Style="{StaticResource SubtleButtonStyle}" Padding="8,3" FontSize="12.5" FontWeight="SemiBold"
+                                Foreground="{DynamicResource AccentBrush}" Content="{Binding ToastActionText}"
+                                Visibility="{Binding HasToastAction, Converter={StaticResource BoolToVis}}" />
+                    </StackPanel>
                 </Border>
             </Grid>
 
+            <!-- 컨텍스트 한도로 오래된 메시지를 빼고 보냈을 때의 안내 -->
+            <TextBlock Grid.Row="4" Margin="24,2,24,0" MaxWidth="{StaticResource ConversationColumnWidth}" Text="{Binding SelectedConversation.ContextNote}"
+                       Foreground="{DynamicResource MutedForegroundBrush}" FontSize="11.5" TextWrapping="Wrap"
+                       Visibility="{Binding SelectedConversation.HasContextNote, Converter={StaticResource BoolToVis}, FallbackValue=Collapsed}" />
+
             <!-- ===== 입력 (상단 텍스트 + 하단 툴바) ===== -->
-            <Border Grid.Row="4" Margin="20,6,20,16" Padding="10,8" Background="{StaticResource ControlBackgroundBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="14"
+            <Border Grid.Row="5" Margin="20,6,20,16" Padding="12,10,10,8" Background="{DynamicResource ControlBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="16"
                     MaxWidth="{StaticResource ConversationColumnWidth}" HorizontalAlignment="Stretch">
                 <StackPanel>
                     <TextBox Text="{Binding InputText, UpdateSourceTrigger=PropertyChanged}"
-                             Tag="{loc:Loc PhMessageInput}" Background="Transparent" BorderThickness="0" Padding="2,2,2,4"
-                             AcceptsReturn="True" TextWrapping="Wrap" MaxHeight="220" VerticalScrollBarVisibility="Auto"
+                             Tag="{loc:Loc PhMessageInput}" Background="Transparent" BorderThickness="0" Padding="2,2,2,4" FontSize="{StaticResource BodyFontSize}"
+                             AcceptsReturn="True" TextWrapping="Wrap" MaxHeight="240" VerticalScrollBarVisibility="Auto"
+                             AutomationProperties.Name="{loc:Loc MessageInput}"
                              behaviors:FocusBehavior.FocusWhenVisible="True"
                              behaviors:FocusBehavior.FocusToken="{Binding InputFocusToken}"
                              behaviors:InputBehaviors.SendCommand="{Binding SendCommand}"
@@ -680,12 +629,16 @@
                              behaviors:InputBehaviors.PasteImageCommand="{Binding PasteImageCommand}" />
 
                     <!-- 첨부 미리보기 -->
-                    <ItemsControl ItemsSource="{Binding Attachments}" Margin="0,4,0,2" Visibility="{Binding HasAttachments, Converter={StaticResource BoolToVis}}">
-                        <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                    <ItemsControl ItemsSource="{Binding Attachments}" Margin="0,6,0,2" Focusable="False" Visibility="{Binding HasAttachments, Converter={StaticResource BoolToVis}}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Grid Margin="0,0,6,4" Width="60" Height="60">
-                                    <Border CornerRadius="6" ClipToBounds="True" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                                <Grid Margin="0,0,8,4" Width="60" Height="60">
+                                    <Border CornerRadius="6" ClipToBounds="True" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                                         <Image Source="{Binding Preview}" Stretch="UniformToFill" />
                                     </Border>
                                     <Button Command="{Binding DataContext.RemoveAttachmentCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"
@@ -720,15 +673,10 @@
                                     </ContextMenu>
                                 </Button.ContextMenu>
                                 <StackPanel Orientation="Horizontal">
-                                    <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconTune}" Width="15" Height="15" />
+                                    <Path Style="{StaticResource IconStyle}" Data="{StaticResource IconBookmark}" Width="15" Height="15" />
                                     <TextBlock Text="{loc:Loc Presets}" Margin="6,0,0,0" VerticalAlignment="Center" FontSize="12.5" />
                                 </StackPanel>
                             </Button>
-
-                            <!-- 전송이 막힌 이유 안내 -->
-                            <TextBlock Foreground="{StaticResource MutedForegroundBrush}" FontSize="11.5" VerticalAlignment="Center" Margin="10,0,0,0" TextTrimming="CharacterEllipsis"
-                                       Text="{Binding SendBlockedByOtherText}"
-                                       Visibility="{Binding IsSendBlockedByOtherConversation, Converter={StaticResource BoolToVis}}" />
                         </StackPanel>
 
                         <Button HorizontalAlignment="Right" Command="{Binding SendCommand}" Style="{StaticResource AccentButtonStyle}" Padding="14,7"
@@ -741,13 +689,38 @@
                         <Button HorizontalAlignment="Right" Command="{Binding StopCommand}" Padding="14,7"
                                 Visibility="{Binding IsSelectedStreaming, Converter={StaticResource BoolToVis}}" ToolTip="{loc:Loc TipStop}">
                             <StackPanel Orientation="Horizontal">
-                                <Path Data="{StaticResource IconStop}" Width="14" Height="14" Stretch="Uniform" Fill="{StaticResource ErrorBrush}" VerticalAlignment="Center" />
+                                <Path Data="{StaticResource IconStop}" Width="14" Height="14" Stretch="Uniform" Fill="{DynamicResource ErrorBrush}" VerticalAlignment="Center" />
                                 <TextBlock Text="{loc:Loc Stop}" Margin="7,0,0,0" VerticalAlignment="Center" />
                             </StackPanel>
                         </Button>
                     </Grid>
                 </StackPanel>
             </Border>
+
+            <!-- 파일을 끌어 올렸을 때: 놓을 수 있는 자리임을 알린다 -->
+            <Border Grid.RowSpan="6" Margin="12" CornerRadius="14" IsHitTestVisible="False" Background="{DynamicResource AccentSoftBrush}" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="2">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding (behaviors:InputBehaviors.IsFileDragOver), ElementName=ChatArea}" Value="True">
+                                <Setter Property="Visibility" Value="Visible" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <Path Data="{StaticResource IconImage}" Width="44" Height="44" Stretch="Uniform" Fill="{DynamicResource AccentBrush}" HorizontalAlignment="Center" />
+                    <TextBlock Text="{loc:Loc DropImagesHere}" Foreground="{DynamicResource ForegroundBrush}" FontSize="15" FontWeight="SemiBold" Margin="0,12,0,0" />
+                </StackPanel>
+            </Border>
         </Grid>
+
+        <!-- 사이드바와 채팅 영역의 경계를 끌어 사이드바 폭 조절. 사이드바 안이 아니라 경계 바로 오른쪽에 두어 대화 목록의 스크롤 막대를 가리지 않는다. -->
+        <Thumb Grid.Column="1" HorizontalAlignment="Left" Style="{StaticResource EdgeResizeThumbStyle}"
+               AutomationProperties.Name="{loc:Loc TipResizeSidebar}" ToolTip="{loc:Loc TipResizeSidebar}"
+               Visibility="{Binding IsSidebarCollapsed, Converter={StaticResource InverseBoolToVis}}"
+               behaviors:LayoutBehaviors.ResizeWidth="{Binding SidebarWidth}"
+               behaviors:LayoutBehaviors.ResizeMin="220" behaviors:LayoutBehaviors.ResizeMax="460" />
     </Grid>
 </views:WindowView>

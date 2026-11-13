@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using NvChat.Localization;
 
 namespace NvChat.Models;
@@ -19,16 +20,21 @@ public sealed class ModelUsage
     /// <summary>출력(생성) 토큰 수.</summary>
     public long CompletionTokens { get; set; }
 
+    // 아래 계산 속성들은 화면 표시용이다. 저장 파일에 (번역된 문구까지) 함께 쓰이지 않게 직렬화에서 뺀다.
+    [JsonIgnore]
     public long TotalTokens => PromptTokens + CompletionTokens;
 
     /// <summary>모델 이름만 짧게(퍼블리셔 접두사 제거).</summary>
+    [JsonIgnore]
     public string ShortName =>
         string.IsNullOrEmpty(ModelId) ? LocalizationManager.Instance["Unknown"]
         : ModelId.LastIndexOf('/') is var slash && slash >= 0 && slash < ModelId.Length - 1 ? ModelId[(slash + 1)..]
         : ModelId;
 
+    [JsonIgnore]
     public string TotalText => FormatTokens(TotalTokens);
 
+    [JsonIgnore]
     public string DetailText => LocalizationManager.Instance.Tr(
         "UsageDetail", Requests.ToString("N0"), FormatTokens(PromptTokens), FormatTokens(CompletionTokens));
 

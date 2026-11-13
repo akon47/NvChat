@@ -17,6 +17,12 @@ namespace NvChat.Services;
 /// </summary>
 public sealed class NvidiaClient(Func<AppSettings> settingsAccessor) : INvidiaClient, IDisposable
 {
+    /// <summary>
+    /// 스트림이 이만큼 아무것도 보내지 않으면 끊긴 것으로 본다. 전체 타임아웃은 없으므로(긴 답변을 끊지 않으려고),
+    /// 서버가 헤더만 보내고 멈추거나 중간에 조용히 죽으면 이것이 없을 때 사용자가 직접 중단할 때까지 기다리게 된다.
+    /// </summary>
+    internal static readonly TimeSpan StreamIdleTimeout = TimeSpan.FromSeconds(120);
+
     private static LocalizationManager L => LocalizationManager.Instance;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -25,9 +31,17 @@ public sealed class NvidiaClient(Func<AppSettings> settingsAccessor) : INvidiaCl
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     };
 
-    // 스트리밍 응답은 몇 분 이상 이어질 수 있으므로 전체 타임아웃을 끄고 취소는 전적으로 CancellationToken 으로 제어한다.
+    // 스트리밍 응답은 몇 분 이상 이어질 수 있으므로 전체 타임아웃을 끄고 취소는 CancellationToken 과 유휴 감시로 제어한다.
     // (HttpClient.Timeout 은 ResponseHeadersRead 를 써도 본문 읽기 전체에 적용되어 긴 응답을 끊어버린다.)
-    private readonly HttpClient _http = new() { Timeout = Timeout.InfiniteTimeSpan };
+    // 트레이에 며칠씩 떠 있는 앱이므로 연결을 주기적으로 새로 맺어 DNS 변경을 따라간다.
+    private readonly HttpClient _http = new(new SocketsHttpHandler
+    {
+        PooledConnectionLifetime = TimeSpan.FromMinutes(5),
+        ConnectTimeout = TimeSpan.FromSeconds(20),
+    })
+    {
+        Timeout = Timeout.InfiniteTimeSpan,
+    };
 
     public void Dispose() => _http.Dispose();
 
@@ -45,19 +59,25 @@ public sealed class NvidiaClient(Func<AppSettings> settingsAccessor) : INvidiaCl
         httpRequest.Headers.Accept.ParseAdd("text/event-stream");
         httpRequest.Content = CreateJsonContent(JsonSerializer.Serialize(request, JsonOptions));
 
-        using var response = await _http.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+        // 유휴 감시: 사용자의 취소 토큰과 묶어 두고, 무언가 도착할 때마다 타이머를 다시 건다.
+        using var idle = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        idle.CancelAfter(StreamIdleTimeout);
+
+        using var response = await GuardIdle(() => _http.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, idle.Token), cancellationToken).ConfigureAwait(false);
         if (!response.IsSuccessStatusCode)
         {
-            string body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-            throw new NvidiaApiException(BuildErrorMessage((int)response.StatusCode, body, response));
+            string body = await GuardIdle(() => response.Content.ReadAsStringAsync(idle.Token), cancellationToken).ConfigureAwait(false);
+            throw CreateException((int)response.StatusCode, body, response);
         }
 
-        using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+        using var stream = await GuardIdle(() => response.Content.ReadAsStreamAsync(idle.Token), cancellationToken).ConfigureAwait(false);
         using StreamReader reader = new(stream, Encoding.UTF8);
 
-        while (await reader.ReadLineAsync(cancellationToken).ConfigureAwait(false) is { } rawLine)
+        while (true)
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            idle.CancelAfter(StreamIdleTimeout);
+            string? rawLine = await GuardIdle(() => reader.ReadLineAsync(idle.Token).AsTask(), cancellationToken).ConfigureAwait(false);
+            if (rawLine is null) break;
 
             string line = rawLine.Trim();
             if (!line.StartsWith("data:", StringComparison.Ordinal)) continue;
@@ -65,14 +85,38 @@ public sealed class NvidiaClient(Func<AppSettings> settingsAccessor) : INvidiaCl
             string data = line["data:".Length..].Trim();
             if (data == "[DONE]") break;
 
+            var chunk = ParseChunk(data);
+
             // 200 으로 시작한 뒤 본문 안에 에러 객체를 흘려보내는 경우가 있다. 그냥 무시하면 "빈 응답"처럼 보이므로 실제 사유를 올려 보낸다.
-            if (TryParseStreamError(data) is { } streamError) throw new NvidiaApiException(streamError);
+            if (chunk.Error is { } streamError) throw new NvidiaApiException(streamError);
 
             // 사용량은 choices 가 빈 마지막 청크에 따로 온다.
-            if (TryParseUsage(data) is { } usage)
-                yield return new ChatStreamDelta(null, null, null, new ChatUsage(usage.PromptTokens, usage.CompletionTokens, true));
+            if (chunk.Usage is { } usage) yield return new ChatStreamDelta(null, null, null, usage);
+            if (chunk.Delta is { } delta) yield return delta;
+        }
+    }
 
-            if (TryParseDelta(data) is { } delta) yield return delta;
+    /// <summary>
+    /// 유휴 타임아웃으로 취소된 경우를 사용자 취소와 구분해, 사유가 담긴 예외로 바꾼다.
+    /// (반복자 메서드에서는 yield 를 감싼 try/catch 를 쓸 수 없어 대기 지점마다 이 헬퍼로 감싼다.)
+    /// </summary>
+    private static async Task<T> GuardIdle<T>(Func<Task<T>> operation, CancellationToken userToken)
+    {
+        try
+        {
+            return await operation().ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (!userToken.IsCancellationRequested)
+        {
+            throw new NvidiaApiException(L.Tr("StreamIdleTimeout", (int)StreamIdleTimeout.TotalSeconds));
+        }
+        catch (IOException ex) when (!userToken.IsCancellationRequested)
+        {
+            throw new NvidiaApiException(L.Tr("StreamInterrupted", ex.Message), ex);
+        }
+        catch (HttpRequestException ex)
+        {
+            throw new NvidiaApiException(L.Tr("ConnectionFailed", ex.Message), ex);
         }
     }
 
@@ -91,7 +135,7 @@ public sealed class NvidiaClient(Func<AppSettings> settingsAccessor) : INvidiaCl
 
         using var response = await _http.SendAsync(httpRequest, cancellationToken).ConfigureAwait(false);
         string body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-        if (!response.IsSuccessStatusCode) throw new NvidiaApiException(BuildErrorMessage((int)response.StatusCode, body, response));
+        if (!response.IsSuccessStatusCode) throw CreateException((int)response.StatusCode, body, response);
 
         var parsed = JsonSerializer.Deserialize<ChatCompletionResponse>(body, JsonOptions);
         string content = parsed?.Choices is [{ Message: { } message }, ..] ? message.Content ?? "" : "";
@@ -108,7 +152,7 @@ public sealed class NvidiaClient(Func<AppSettings> settingsAccessor) : INvidiaCl
 
         using var response = await _http.SendAsync(request, cancellationToken).ConfigureAwait(false);
         string body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-        if (!response.IsSuccessStatusCode) throw new NvidiaApiException(BuildErrorMessage((int)response.StatusCode, body, response));
+        if (!response.IsSuccessStatusCode) throw CreateException((int)response.StatusCode, body, response);
 
         var parsed = JsonSerializer.Deserialize<ModelsResponse>(body, JsonOptions);
         return (parsed?.Data ?? [])
@@ -133,41 +177,32 @@ public sealed class NvidiaClient(Func<AppSettings> settingsAccessor) : INvidiaCl
         StreamOptions = stream ? new StreamOptions { IncludeUsage = true } : null,
     };
 
-    /// <summary>청크에 담긴 토큰 사용량을 읽는다. (stream_options.include_usage 지원 서버만)</summary>
-    private static TokenUsage? TryParseUsage(string data)
+    /// <summary>SSE 한 줄의 data 를 한 번만 파싱해 델타/사용량/오류로 나눈다. 부분·비정상 청크는 전부 null 로 조용히 건너뛴다.</summary>
+    internal static (ChatStreamDelta? Delta, ChatUsage? Usage, string? Error) ParseChunk(string data)
     {
-        if (!data.Contains("\"usage\"", StringComparison.Ordinal)) return null;
-        try { return JsonSerializer.Deserialize<ChatCompletionChunk>(data, JsonOptions)?.Usage; }
-        catch (JsonException) { return null; }
-    }
+        ChatCompletionChunk? chunk;
+        try { chunk = JsonSerializer.Deserialize<ChatCompletionChunk>(data, JsonOptions); }
+        catch (JsonException) { return default; }
+        if (chunk is null) return default;
 
-    /// <summary>SSE 본문에 실려 온 에러 페이로드면 그 메시지. (choices 가 있는 정상 청크는 제외)</summary>
-    private static string? TryParseStreamError(string data)
-    {
-        if (!data.Contains("\"error\"", StringComparison.Ordinal)) return null;
-        try
+        // 에러 페이로드: choices 없이 error 만 있는 객체.
+        if (chunk.Choices is null && chunk.Error is { ValueKind: not JsonValueKind.Null and not JsonValueKind.Undefined })
+            return (null, null, TryExtractErrorDetail(data) is { Length: > 0 } detail ? detail : data);
+
+        ChatUsage? usage = chunk.Usage is { } u ? new ChatUsage(u.PromptTokens, u.CompletionTokens, true) : null;
+
+        ChatStreamDelta? delta = null;
+        if (chunk.Choices is [{ } choice, ..])
         {
-            using var doc = JsonDocument.Parse(data);
-            if (doc.RootElement.ValueKind != JsonValueKind.Object || doc.RootElement.TryGetProperty("choices", out _)) return null;
-            return TryExtractErrorDetail(data) is { Length: > 0 } detail ? detail : null;
-        }
-        catch (JsonException) { return null; }
-    }
-
-    private static ChatStreamDelta? TryParseDelta(string data)
-    {
-        try
-        {
-            if (JsonSerializer.Deserialize<ChatCompletionChunk>(data, JsonOptions)?.Choices is not [{ } choice, ..]) return null;
-
             string? content = choice.Delta?.Content;
-            string? reasoning = choice.Delta?.ReasoningContent;
+            string? reasoning = choice.Delta?.ReasoningContent ?? choice.Delta?.Reasoning;
 
             // 본문이 없어도 종료 사유가 있으면 전달한다. (빈 응답의 원인 표시용)
-            if (string.IsNullOrEmpty(content) && string.IsNullOrEmpty(reasoning) && string.IsNullOrEmpty(choice.FinishReason)) return null;
-            return new ChatStreamDelta(content, reasoning, choice.FinishReason);
+            if (!string.IsNullOrEmpty(content) || !string.IsNullOrEmpty(reasoning) || !string.IsNullOrEmpty(choice.FinishReason))
+                delta = new ChatStreamDelta(content, reasoning, choice.FinishReason);
         }
-        catch (JsonException) { return null; } // 부분/비정상 청크는 조용히 건너뛴다.
+
+        return (delta, usage, null);
     }
 
     private AppSettings GetConfiguredSettings()
@@ -212,21 +247,29 @@ public sealed class NvidiaClient(Func<AppSettings> settingsAccessor) : INvidiaCl
 
     private static string CombineUrl(string baseUrl, string relative) => $"{baseUrl.TrimEnd('/')}/{relative.TrimStart('/')}";
 
-    /// <summary>에러 응답 본문에서 사람이 읽을 메시지를 최대한 뽑아낸다.</summary>
-    private static string BuildErrorMessage(int statusCode, string body, HttpResponseMessage? response = null)
+    /// <summary>에러 응답 본문에서 사람이 읽을 메시지를 최대한 뽑아 예외로 만든다.</summary>
+    private static NvidiaApiException CreateException(int statusCode, string body, HttpResponseMessage? response = null)
     {
         string detail = TryExtractErrorDetail(body) is { Length: > 0 } d ? d
             : string.IsNullOrWhiteSpace(body) ? L["NoBody"] : body.Trim();
         if (detail.Length > 500) detail = detail[..500] + "…";
 
+        int? retryAfter = statusCode == 429 ? TryReadRetryAfterSeconds(response) : null;
         string hint = statusCode switch
         {
             401 or 403 => L["HintCheckKey"],
-            429 => TryReadRetryAfterSeconds(response) is { } wait ? L.Tr("HintRateLimitWait", wait) : L["HintRateLimit"],
+            429 => retryAfter is { } wait ? L.Tr("HintRateLimitWait", wait) : L["HintRateLimit"],
+            400 or 413 when LooksLikeContextOverflow(detail) => L["HintContextTooLong"],
             _ => "",
         };
-        return $"[{statusCode}] {detail}{hint}";
+
+        return new NvidiaApiException($"[{statusCode}] {detail}{hint}") { StatusCode = statusCode, RetryAfterSeconds = retryAfter };
     }
+
+    private static bool LooksLikeContextOverflow(string detail) =>
+        detail.Contains("context", StringComparison.OrdinalIgnoreCase) && (detail.Contains("length", StringComparison.OrdinalIgnoreCase) || detail.Contains("token", StringComparison.OrdinalIgnoreCase))
+        || detail.Contains("too long", StringComparison.OrdinalIgnoreCase)
+        || detail.Contains("maximum", StringComparison.OrdinalIgnoreCase) && detail.Contains("token", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>429 응답의 Retry-After 헤더에서 대기 시간(초)을 읽는다.</summary>
     private static int? TryReadRetryAfterSeconds(HttpResponseMessage? response) => response?.Headers.RetryAfter switch
@@ -236,7 +279,7 @@ public sealed class NvidiaClient(Func<AppSettings> settingsAccessor) : INvidiaCl
         _ => null,
     };
 
-    private static string? TryExtractErrorDetail(string? body)
+    internal static string? TryExtractErrorDetail(string? body)
     {
         if (string.IsNullOrWhiteSpace(body)) return null;
         try
